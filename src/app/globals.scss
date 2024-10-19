@@ -1,0 +1,65 @@
+@import '@/styles/index.scss';
+
+html,
+body {
+  background: #F6F8FB;
+  padding: 0;
+  margin: 0;
+  font-family: $text__font;
+  color: $text__color;
+  overflow: hidden;
+}
+
+main {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+h1, h2, h3, p {
+  margin: 0;
+}
+
+p {
+  font-size: $text__size;
+}
+
+h1 {
+  font-size: $h1__size;
+  font-family: $title__font;
+}
+
+h2 {
+  font-family: $title__font;
+  font-size: $h2__size;
+}
+
+h3 {
+  font-family: $title__font;
+  font-size: $h3__size;
+  font-weight: 600;
+}
+
+*::-webkit-scrollbar {
+	width: 5px;
+	height: 10px;
+}
+
+
+*::-webkit-scrollbar-thumb {
+	border-radius: 10px;
+	background: rgba(0, 0, 0, 0.1);
+}
+
+  
+*::-webkit-scrollbar-track {
+	background: #EDF0F4;
+}
+  

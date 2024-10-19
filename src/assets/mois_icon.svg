@@ -1,0 +1,9 @@
+<svg version="1.2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="50" height="50">
+	<title>jour_icon</title>
+	<defs>
+		<image  width="46" height="48" id="img1" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC4AAAAwBAMAAACcS1XvAAAAAXNSR0IB2cksfwAAABhQTFRFAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVjccKgAAAAh0Uk5TAEjj/+JO5eQYq8+uAAAAhElEQVR4nGNkAAIhRb79DFAAZTOC2M4fGM/AxKFssLjxWeOzMHEoG6d42F0gedaYAQ7AbCPG5AvYxFkYQbowzTHGK47pToi4iDzCXxA2RBwTkCGOTRjoX5zi1LIXjzia3WcJip9lYNa9gETRS3zUnQPqTlzphxrixQewibMwht/BJu4EANz1pnFq3+DlAAAAAElFTkSuQmCC"/>
+	</defs>
+	<style>
+	</style>
+	<use id="Background" href="#img1" x="2" y="0"/>
+</svg>
