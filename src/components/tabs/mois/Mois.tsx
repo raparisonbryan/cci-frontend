@@ -1,10 +1,14 @@
+import styles from "./mois.module.scss";
 import SheetData from "@/components/sheetboard/sheetData";
-import styles from "./main.module.scss";
 
-const getSpreadsheetIdAndRange = (month) => {
+export interface MoisProps {
+    selectedMonth: string
+}
+
+const getSpreadsheetIdAndRange = (month: string) => {
     const spreadsheetId = '1NSbrkreltnCwihnE9tC24sVdDb5Tp5zCknzOXJKc2dQ';
 
-    const monthMap = {
+    const monthMap: { [key: string]: { spreadsheetId: string, range: string } } = {
         Janvier: { spreadsheetId, range: 'Janvier!A1:Z99' },
         Fevrier: { spreadsheetId, range: 'Fevrier!A1:Z99' },
         Mars: { spreadsheetId, range: 'Mars!A1:Z99' },
@@ -12,7 +16,7 @@ const getSpreadsheetIdAndRange = (month) => {
         Mai: { spreadsheetId, range: 'Mai!A1:Z99' },
         Juin: { spreadsheetId, range: 'Juin!A1:Z99' },
         Juillet: { spreadsheetId, range: 'Juillet!A1:Z99' },
-        Août: { spreadsheetId, range: 'Août!A1:Z99' },
+        Aout: { spreadsheetId, range: 'Aout!A1:Z99' },
         Septembre: { spreadsheetId, range: 'Septembre!A1:Z99' },
         Octobre: { spreadsheetId, range: 'Octobre!A1:Z99' },
         Novembre: { spreadsheetId, range: 'Novembre!A1:Z99' },
@@ -21,12 +25,12 @@ const getSpreadsheetIdAndRange = (month) => {
     return monthMap[month];
 };
 
-export default function Main({ selectedMonth }) {
-    const selectedSpreadsheet = getSpreadsheetIdAndRange(selectedMonth);
+const Mois = (props: MoisProps) => {
+    const selectedSpreadsheet = getSpreadsheetIdAndRange(props.selectedMonth);
 
     return (
         <main className={styles.main}>
-            <h1 className={styles.sheetboard_title}>Tableau de bord - {selectedMonth}</h1>
+            <h1 className={styles.sheetboard_title}>Tableau de bord - {props.selectedMonth}</h1>
             <div className={styles.container}>
                 <div className={styles.pointer_events}></div>
                 <SheetData
@@ -35,5 +39,7 @@ export default function Main({ selectedMonth }) {
                 />
             </div>
         </main>
-    );
+    )
 }
+
+export default Mois;
