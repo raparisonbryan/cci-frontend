@@ -1,7 +1,6 @@
 .sheetboard {
     height: 100%;
     width: 100%;
-    background: #EDF0F4;
     padding: 20px;
 }
 
@@ -12,9 +11,8 @@
 .sheetboard_row {
     display: flex;
     width: 100%;
-    border-radius: 5px;
-    margin-bottom: 10px;
     overflow: hidden;
+    border-bottom: 1px solid #B8CBD0;
 }
 
 .clickable {
@@ -32,18 +30,13 @@
 
 .sheetboard_content:first-child {
     flex: 0 0 60px;
-    background: rgb(186 186 186);
+    background: white;
 }
 
 .sheetboard_content:nth-child(2) {
     flex: 0 0 95px;
-    background: rgb(186 186 186);
-    border-radius:  0 5px 5px 0;
+    background: white;
     margin-right: 20px;
-}
-
-.sheetboard_content:nth-child(3) {
-    border-radius: 5px 0 0 5px;
 }
 
 .sheetboard_content:nth-child(n+3) {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import styles from './Modal.module.scss';
 
 interface EditModalProps {
@@ -54,6 +55,18 @@ const EditModal: React.FC<EditModalProps> = ({
         }
     }, [rowData]);
 
+    useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [isOpen]);
+
     if (!isOpen) return null;
 
     const handleChange = (field: string) => (e: { target: { value: any; }; }) => {
@@ -73,7 +86,7 @@ const EditModal: React.FC<EditModalProps> = ({
         e.stopPropagation();
     };
 
-    return (
+    const modalContent = (
         <div className={styles.modalOverlay} onClick={onClose}>
             <div className={styles.modalContent} onClick={handleModalClick}>
                 <div className={styles.modalHeader}>
@@ -134,6 +147,8 @@ const EditModal: React.FC<EditModalProps> = ({
             </div>
         </div>
     );
+
+    return createPortal(modalContent, document.body);
 };
 
 export default EditModal;

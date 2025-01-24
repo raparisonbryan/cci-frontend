@@ -1,9 +1,9 @@
-import Image from "next/image"
+import Image, {StaticImageData} from "next/image"
 import {Property} from "csstype";
 import ObjectFit = Property.ObjectFit;
 
 export interface ImgProps {
-    src: string;
+    src: string | StaticImageData;
     height?: number;
     width?: number;
     objectFit?: ObjectFit;

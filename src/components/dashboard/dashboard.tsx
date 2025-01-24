@@ -3,7 +3,7 @@
 import styles from "./dashboard.module.scss";
 import planning_icon from "@/assets/planning_icon.svg";
 import profil_icon from "@/assets/profil_icon.svg";
-import mois_icon from "@/assets/mois_icon.svg";
+import logo from "@/assets/cci_logo_white.png";
 import Img from "@/components/image/Img";
 import {useState} from "react";
 
@@ -28,8 +28,8 @@ const Dashboard = (props: DashboardProps) => {
     return (
         <div className={styles.dashboard}>
             <div className={styles.title_wrapper}>
-                <Img src={planning_icon} width={70} height={40} objectFit="contain" alt="icone planning" />
                 <p>Planning<br/> CCI Ivato</p>
+                <Img src={logo} width={100} height={50} objectFit="contain" alt="icone planning" />
             </div>
             <div className={styles.separator}></div>
             <div className={styles.tab}>
@@ -38,7 +38,7 @@ const Dashboard = (props: DashboardProps) => {
                     <p>Profil</p>
                 </div>
                 <div className={styles.tab_wrapper} onClick={() => handleTabSelect('Mois')}>
-                    <Img src={mois_icon} width={20} height={20} objectFit="cover" alt="icone mois" />
+                    <Img src={planning_icon} width={20} height={20} objectFit="cover" alt="icone mois" />
                     <p>Vue mois</p>
                 </div>
             </div>

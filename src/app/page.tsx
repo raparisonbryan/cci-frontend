@@ -3,7 +3,7 @@
 import Dashboard from "@/components/dashboard/dashboard";
 import styles from "./page.module.scss";
 import Main from "@/components/main/Main";
-import { useState } from 'react';
+import React, { useState } from 'react';
 
 export default function Home() {
     const [selectedMonth, setSelectedMonth] = useState('Janvier');
@@ -19,8 +19,8 @@ export default function Home() {
 
   return (
     <main className={styles.main}>
-      <Dashboard onMonthSelect={handleMonthSelect} onTabSelect={handleTabSelect} />
-      <Main selectedMonth={selectedMonth} selectedTab={selectedTab}/>
+        <Dashboard onMonthSelect={handleMonthSelect} onTabSelect={handleTabSelect} />
+        <Main selectedMonth={selectedMonth} selectedTab={selectedTab}/>
     </main>
   );
 }

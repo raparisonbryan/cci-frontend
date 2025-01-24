@@ -15,7 +15,7 @@
   background: white;
   padding: 20px;
   border-radius: 8px;
-  width: 90%;
+  width: 100%;
   max-width: 600px;
   max-height: 90vh;
   overflow-y: auto;
@@ -30,9 +30,7 @@
   margin-bottom: 20px;
 
   h2 {
-    margin: 0;
-    font-size: 1.5rem;
-    color: #333;
+    color: #226D68;
   }
 }
 
@@ -62,14 +60,14 @@
 
   label {
     font-weight: 500;
-    color: #555;
+    color: #226D68;
   }
 
   input, textarea {
     padding: 8px 12px;
     border: 1px solid #ddd;
     border-radius: 4px;
-    font-size: 1rem;
+    font-size: 14px;
 
     &:focus {
       outline: none;
@@ -81,11 +79,6 @@
   textarea {
     resize: vertical;
   }
-}
-
-.readOnly {
-  background-color: #f5f5f5;
-  cursor: not-allowed;
 }
 
 .modalFooter {
@@ -114,11 +107,11 @@
 }
 
 .saveButton {
-  background-color: #0066cc;
-  border: 1px solid #0066cc;
+  background-color: #226D68;
+  border: 1px solid #226D68;
   color: white;
 
   &:hover {
-    background-color: #0052a3;
+    background-color: #18534F;
   }
 }
