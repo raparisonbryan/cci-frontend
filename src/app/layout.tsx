@@ -1,6 +1,7 @@
 import "./globals.scss";
 import { ReduxProvider } from './providers';
 import {ReactNode} from "react";
+import { AntdRegistry} from "@ant-design/nextjs-registry";
 
 export const metadata = {
   title: "Application de gestion de planning CCI",
@@ -15,7 +16,9 @@ export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="fr">
       <ReduxProvider>
-        <body>{children}</body>
+          <AntdRegistry>
+            <body>{children}</body>
+          </AntdRegistry>
       </ReduxProvider>
     </html>
   );

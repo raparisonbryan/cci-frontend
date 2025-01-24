@@ -32,7 +32,6 @@ const Mois = (props: MoisProps) => {
         <main className={styles.main}>
             <h1 className={styles.sheetboard_title}>Tableau de bord - {props.selectedMonth}</h1>
             <div className={styles.container}>
-                <div className={styles.pointer_events}></div>
                 <SheetData
                     spreadsheetId={selectedSpreadsheet.spreadsheetId}
                     range={selectedSpreadsheet.range}
