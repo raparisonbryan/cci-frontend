@@ -101,18 +101,26 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
                 </thead>
                 <tbody>
                 {data.slice(1).map((row: string[], rowIndex: number) => (
-                    <tr className={styles.sheetboard_row} key={rowIndex}>
+                    <tr
+                        className={`${styles.sheetboard_row} ${styles.clickable}`}
+                        key={rowIndex}
+                        onClick={() => handleRowClick(rowIndex + 1)}
+                    >
                         {row.map((cell: string, cellIndex: number) => (
                             <td
-                                className={`${styles.sheetboard_content} ${cellIndex <= 1 ? styles.clickable : ''}`}
+                                className={styles.sheetboard_content}
                                 key={cellIndex}
-                                onClick={() => cellIndex <= 1 && handleRowClick(rowIndex + 1)}
                             >
                                 <div
                                     contentEditable={cellIndex > 1}
                                     suppressContentEditableWarning
                                     onBlur={(e) => cellIndex > 1 && handleCellChange(e, rowIndex + 1, cellIndex)}
                                     className={styles.editableCell}
+                                    onClick={(e) => {
+                                        if (cellIndex > 1) {
+                                            e.stopPropagation();
+                                        }
+                                    }}
                                 >
                                     {cell || ''}
                                 </div>

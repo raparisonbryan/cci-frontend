@@ -2,17 +2,38 @@
     height: 100%;
     width: 100%;
     padding: 20px;
-}
-
-.sheetboard thead {
-    margin-bottom: 10px;
+    border-spacing: 0;
 }
 
 .sheetboard_row {
     display: flex;
     width: 100%;
     overflow: hidden;
-    border-bottom: 1px solid #B8CBD0;
+    border-bottom: 1px solid #EAEAEA;
+
+    &:hover {
+        background: #F5F5F5;
+    }
+}
+
+thead {
+    .sheetboard_row {
+        border-bottom: 1px solid #EAEAEA;
+    }
+
+    .sheetboard_content {
+        background: #EAEAEA;
+        font-weight: bold;
+        padding-left: 10px;
+    }
+
+    .sheetboard_content:first-child {
+        border-radius: 5px 0 0 0;
+    }
+
+    .sheetboard_content:last-child {
+        border-radius: 0 5px 0 0;
+    }
 }
 
 .clickable {
@@ -20,9 +41,8 @@
 }
 
 .sheetboard_content {
-    background: white;
-    padding: 5px;
-    text-align: center;
+    text-align: start;
+    padding: 15px 5px;
     font-size: 14px;
     white-space: nowrap;
     overflow: hidden;
@@ -30,13 +50,10 @@
 
 .sheetboard_content:first-child {
     flex: 0 0 60px;
-    background: white;
 }
 
 .sheetboard_content:nth-child(2) {
-    flex: 0 0 95px;
-    background: white;
-    margin-right: 20px;
+    flex: 0 0 100px;
 }
 
 .sheetboard_content:nth-child(n+3) {
@@ -48,4 +65,37 @@
     word-wrap: break-word;
     min-height: 20px;
     padding: 5px;
+    border-radius: 3px;
+    border: 1px solid transparent;
+
+    &:focus {
+        outline: none;
+        border: 1px solid #18534F;
+    }
+
+    &:hover {
+        background: white;
+    }
+}
+
+.sheetboard_content:first-child .editableCell {
+    &:focus {
+        outline: none;
+        border: 1px solid #F5F5F5;
+    }
+
+    &:hover {
+        background: #F5F5F5;
+    }
+}
+
+.sheetboard_content:nth-child(2) .editableCell {
+    &:focus {
+        outline: none;
+        border: 1px solid #F5F5F5;
+    }
+
+    &:hover {
+        background: #F5F5F5;
+    }
 }
