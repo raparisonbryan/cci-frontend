@@ -1,6 +1,6 @@
 import { google } from 'googleapis';
-import credentials from '@/config/credentials.json';
 
+const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS || '{}');
 class GoogleSheetsService {
     private auth;
     private sheets;
