@@ -53,10 +53,16 @@
   gap: 15px;
 }
 
+.formRow {
+  display: flex;
+  gap: 15px;
+}
+
 .formGroup {
   display: flex;
   flex-direction: column;
   gap: 5px;
+  width: 100%;
 
   label {
     font-weight: 500;
@@ -68,6 +74,7 @@
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 14px;
+    width: 100%;
 
     &:focus {
       outline: none;
@@ -83,9 +90,14 @@
 
 .modalFooter {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 10px;
   margin-top: 20px;
+
+  div {
+    display: flex;
+    gap: 10px;
+  }
 
   button {
     padding: 8px 16px;
@@ -123,5 +135,15 @@
 
   &:hover {
     background-color: #005cbf;
+  }
+}
+
+.deleteButton {
+  background-color: #cc0000;
+  border: 1px solid #cc0000;
+  color: white;
+
+  &:hover {
+    background-color: #bf0000;
   }
 }

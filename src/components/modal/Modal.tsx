@@ -6,6 +6,7 @@ interface EditModalProps {
     isOpen: boolean;
     onClose: () => void;
     onInsertRow: () => void;
+    onDeleteRow: () => void;
     rowData: {
         date: string;
         jour: string;
@@ -31,6 +32,7 @@ const EditModal: React.FC<EditModalProps> = ({
     onClose,
     rowData,
     onInsertRow,
+    onDeleteRow,
     onSave
 }) => {
     const [formData, setFormData] = useState({
@@ -93,6 +95,11 @@ const EditModal: React.FC<EditModalProps> = ({
         onClose();
     };
 
+    const handleDeleteRow = () => {
+        onDeleteRow();
+        onClose();
+    };
+
     const modalContent = (
         <div className={styles.modalOverlay} onClick={onClose}>
             <div className={styles.modalContent} onClick={handleModalClick}>
@@ -102,6 +109,23 @@ const EditModal: React.FC<EditModalProps> = ({
                 </div>
 
                 <form onSubmit={handleSubmit} className={styles.modalForm}>
+                    <div className={styles.formRow}>
+                        <div className={styles.formGroup}>
+                            <label>Date</label>
+                            <input
+                                value={formData.date}
+                                onChange={handleChange('date')}
+                            />
+                        </div>
+                        <div className={styles.formGroup}>
+                            <label>Jour</label>
+                            <input
+                                value={formData.jour}
+                                onChange={handleChange('jour')}
+                            />
+                        </div>
+                    </div>
+
                     <div className={styles.formGroup}>
                         <label>Sélection</label>
                         <textarea
@@ -143,19 +167,22 @@ const EditModal: React.FC<EditModalProps> = ({
                     </div>
 
                     <div className={styles.modalFooter}>
-                        <button type="button" onClick={onClose} className={styles.cancelButton}>
-                            Annuler
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleInsertRow}
-                            className={styles.insertButton}
-                        >
-                            Ajouter un évènement
-                        </button>
-                        <button type="submit" className={styles.saveButton}>
-                            Enregistrer
-                        </button>
+                        <div>
+                            <button type="button" className={styles.deleteButton} onClick={handleDeleteRow}>
+                                Supprimer
+                            </button>
+                            <button type="button" className={styles.insertButton} onClick={handleInsertRow}>
+                                Ajouter
+                            </button>
+                        </div>
+                        <div>
+                            <button type="button" onClick={onClose} className={styles.cancelButton}>
+                                Annuler
+                            </button>
+                            <button type="submit" className={styles.saveButton}>
+                                Enregistrer
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>

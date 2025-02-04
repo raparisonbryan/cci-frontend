@@ -11,7 +11,7 @@ export async function POST(request: Request) {
             spreadsheetId,
             requestBody: {
                 requests: [{
-                    insertDimension: {
+                    deleteDimension: {
                         range: {
                             sheetId: 0,
                             dimension: 'ROWS',
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
         return NextResponse.json(response.data);
     } catch (error) {
         return NextResponse.json(
-            { error: "Error inserting row" },
+            { error: "Error deleting row" },
             { status: 500 }
         );
     }

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import {fetchSheetData, updateSheetData, updateCell, insertSheet} from '@/context/sheetSlice';
+import {fetchSheetData, updateSheetData, updateCell, insertSheet, deleteSheet } from '@/context/sheetSlice';
 import styles from './sheetData.module.scss';
 import EditModal from '@/components/modal/Modal';
 
@@ -65,6 +65,8 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
         if (selectedRowIndex === null) return;
 
         const updatedValues = [
+            formData.date,
+            formData.jour,
             formData.selection,
             formData.evenement,
             formData.client,
@@ -73,7 +75,7 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
         ];
 
         updatedValues.forEach((value, index) => {
-            const cellIndex = index + 2;
+            const cellIndex = index;
             dispatch(updateCell({
                 rowIndex: selectedRowIndex,
                 cellIndex,
@@ -115,6 +117,23 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
             setIsModalOpen(false);
         } catch (error) {
             console.error('Error inserting row:', error);
+        }
+    };
+
+    const handleDeleteRow = async () => {
+        if (selectedRowIndex === null) return;
+
+        try {
+            await dispatch(deleteSheet({
+                spreadsheetId,
+                range: `${range.split('!')[0]}!A${selectedRowIndex + 1}`,
+            }) as any);
+
+            await dispatch(fetchSheetData({ spreadsheetId, range }) as any);
+
+            setIsModalOpen(false);
+        } catch (error) {
+            console.error('Error deleting row:', error);
         }
     };
 
@@ -166,6 +185,7 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
                 rowData={selectedRowData as RowData}
                 onSave={handleModalSave}
                 onInsertRow={handleInsertRow}
+                onDeleteRow={handleDeleteRow}
             />
         </>
     );

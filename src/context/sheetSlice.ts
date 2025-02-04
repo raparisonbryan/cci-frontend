@@ -50,6 +50,16 @@ export const insertSheet = createAsyncThunk(
       return response.data;
     }
 );
+export const deleteSheet = createAsyncThunk(
+    "sheet/deleteSheet",
+    async ({ spreadsheetId, range }: { spreadsheetId: string, range: string }) => {
+        const response = await axios.post("/api/sheets/delete", {
+            spreadsheetId,
+            range,
+        });
+        return response.data;
+    }
+);
 
 const initialState: SheetState = {
   data: [],
