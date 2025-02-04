@@ -115,3 +115,13 @@
     background-color: #18534F;
   }
 }
+
+.insertButton {
+  background-color: #0066cc;
+  border: 1px solid #0066cc;
+  color: white;
+
+  &:hover {
+    background-color: #005cbf;
+  }
+}

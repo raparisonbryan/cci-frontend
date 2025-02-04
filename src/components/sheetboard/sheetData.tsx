@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { fetchSheetData, updateSheetData, updateCell } from '@/context/sheetSlice';
+import {fetchSheetData, updateSheetData, updateCell, insertSheet} from '@/context/sheetSlice';
 import styles from './sheetData.module.scss';
 import EditModal from '@/components/modal/Modal';
 
@@ -89,6 +89,35 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
         });
     };
 
+    const handleInsertRow = async () => {
+        if (selectedRowIndex === null) return;
+
+        try {
+            const insertPosition = selectedRowIndex + 1;
+            const emptyRow = Array(data[0].length).fill('');
+            emptyRow[0] = data[selectedRowIndex][0];
+            emptyRow[1] = data[selectedRowIndex][1];
+
+            await dispatch(insertSheet({
+                spreadsheetId,
+                range: `${range.split('!')[0]}!A${insertPosition}`,
+            }) as any);
+
+            const insertRange = `${range.split('!')[0]}!A${insertPosition}:${String.fromCharCode(65 + data[0].length - 1)}${insertPosition}`;
+            await dispatch(updateSheetData({
+                spreadsheetId,
+                range: insertRange,
+                values: [emptyRow]
+            }) as any);
+
+            await dispatch(fetchSheetData({ spreadsheetId, range }) as any);
+
+            setIsModalOpen(false);
+        } catch (error) {
+            console.error('Error inserting row:', error);
+        }
+    };
+
     return (
         <>
             <table className={styles.sheetboard}>
@@ -136,6 +165,7 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
                 onClose={() => setIsModalOpen(false)}
                 rowData={selectedRowData as RowData}
                 onSave={handleModalSave}
+                onInsertRow={handleInsertRow}
             />
         </>
     );

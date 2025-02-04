@@ -5,6 +5,7 @@ import styles from './Modal.module.scss';
 interface EditModalProps {
     isOpen: boolean;
     onClose: () => void;
+    onInsertRow: () => void;
     rowData: {
         date: string;
         jour: string;
@@ -29,6 +30,7 @@ const EditModal: React.FC<EditModalProps> = ({
     isOpen,
     onClose,
     rowData,
+    onInsertRow,
     onSave
 }) => {
     const [formData, setFormData] = useState({
@@ -86,6 +88,11 @@ const EditModal: React.FC<EditModalProps> = ({
         e.stopPropagation();
     };
 
+    const handleInsertRow = () => {
+        onInsertRow();
+        onClose();
+    };
+
     const modalContent = (
         <div className={styles.modalOverlay} onClick={onClose}>
             <div className={styles.modalContent} onClick={handleModalClick}>
@@ -138,6 +145,13 @@ const EditModal: React.FC<EditModalProps> = ({
                     <div className={styles.modalFooter}>
                         <button type="button" onClick={onClose} className={styles.cancelButton}>
                             Annuler
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleInsertRow}
+                            className={styles.insertButton}
+                        >
+                            Ajouter un évènement
                         </button>
                         <button type="submit" className={styles.saveButton}>
                             Enregistrer

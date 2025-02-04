@@ -21,7 +21,7 @@ interface SheetState {
 export const fetchSheetData = createAsyncThunk(
   "sheet/fetchSheetData",
   async ({ spreadsheetId, range }: FetchSheetDataArgs) => {
-    const response = await axios.get("http://localhost:3000/sheets/data", {
+    const response = await axios.get("/api/sheets/", {
       params: { spreadsheetId, range },
     });
     return response.data;
@@ -31,13 +31,24 @@ export const fetchSheetData = createAsyncThunk(
 export const updateSheetData = createAsyncThunk(
   "sheet/updateSheetData",
   async ({ spreadsheetId, range, values }: UpdateSheetDataArgs) => {
-    const response = await axios.post("http://localhost:3000/sheets/data", {
+    const response = await axios.post("/api/sheets", {
       spreadsheetId,
       range,
       values,
     });
     return response.data;
   }
+);
+
+export const insertSheet = createAsyncThunk(
+    "sheet/insertSheet",
+    async ({ spreadsheetId, range }: { spreadsheetId: string, range: string }) => {
+      const response = await axios.post("/api/sheets/insert", {
+        spreadsheetId,
+        range,
+      });
+      return response.data;
+    }
 );
 
 const initialState: SheetState = {
@@ -68,7 +79,7 @@ const sheetSlice = createSlice({
         state.status = "failed";
         state.error = action.error.message || null;
       })
-      .addCase(updateSheetData.fulfilled, (state, action: PayloadAction<string[][]>) => {
+      .addCase(updateSheetData.fulfilled, () => {
         // Optionally handle additional logic after successful update
       });
   },
