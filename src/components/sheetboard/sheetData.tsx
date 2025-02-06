@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import styles from './sheetData.module.scss';
 import EditModal from '@/components/modal/Modal';
+import { Skeleton } from "antd";
 
 export interface SheetDataProps {
     spreadsheetId: string;
@@ -25,7 +26,7 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
     const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    const fetchSheetData = async () => {
+    const fetchSheetData = useCallback(async () => {
         try {
             const response = await fetch(`/api/sheets?spreadsheetId=${spreadsheetId}&range=${range}`);
             const sheetData = await response.json();
@@ -35,7 +36,7 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
             console.error('Error fetching sheet data:', error);
             setIsLoading(false);
         }
-    };
+    }, [spreadsheetId, range]);
 
     useEffect(() => {
         fetchSheetData();
@@ -70,7 +71,7 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
         return () => {
             if (socket) socket.close();
         };
-    }, [spreadsheetId, range]);
+    }, [spreadsheetId, range, fetchSheetData]);
 
     const handleCellChange = async (event: React.FocusEvent<HTMLDivElement>, rowIndex: number, cellIndex: number) => {
         const value = event.target.innerText;
@@ -246,18 +247,41 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
     };
 
     if (isLoading) {
-        return <div>Chargement...</div>;
+        return (
+            <table className={styles.sheetboard}>
+                <thead>
+                    <tr className={styles.sheetboard_row}>
+                        <th className={styles.sheetboard_content}>Date</th>
+                        <th className={styles.sheetboard_content}>Jour</th>
+                        <th className={styles.sheetboard_content}>Sélection</th>
+                        <th className={styles.sheetboard_content}>Évènement</th>
+                        <th className={styles.sheetboard_content}>Client</th>
+                        <th className={styles.sheetboard_content}>Contact</th>
+                        <th className={styles.sheetboard_content}>Observation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {[...Array(10)].map((_, index) => (
+                        <tr key={index} className={styles.skeleton}>
+                            <td className={styles.skeleton}>
+                                <Skeleton.Input block={true} active />
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        );
     }
 
     return (
         <>
             <table className={styles.sheetboard}>
                 <thead>
-                <tr className={styles.sheetboard_row}>
-                    {data[0]?.map((header: string, index: number) => (
-                        <th className={styles.sheetboard_content} key={index}>{header}</th>
-                    ))}
-                </tr>
+                    <tr className={styles.sheetboard_row}>
+                        {data[0]?.map((header: string, index: number) => (
+                            <th className={styles.sheetboard_content} key={index}>{header}</th>
+                        ))}
+                    </tr>
                 </thead>
                 <tbody>
                 {data.slice(1).map((row: string[], rowIndex: number) => (

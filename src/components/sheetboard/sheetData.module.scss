@@ -1,8 +1,13 @@
 .sheetboard {
     height: 100%;
     width: 100%;
-    padding: 20px;
+    padding: 0 20px 20px 20px;
     border-spacing: 0;
+
+    thead {
+        position: sticky;
+        top: 0;
+    }
 }
 
 .sheetboard_row {
@@ -98,4 +103,8 @@ thead {
     &:hover {
         background: #F5F5F5;
     }
+}
+
+.skeleton {
+    width: 100%;
 }
