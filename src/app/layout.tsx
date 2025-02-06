@@ -1,5 +1,4 @@
 import "./globals.scss";
-import { ReduxProvider } from './providers';
 import {ReactNode} from "react";
 import { AntdRegistry} from "@ant-design/nextjs-registry";
 
@@ -15,11 +14,9 @@ export interface RootLayoutProps {
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="fr">
-      <ReduxProvider>
-          <AntdRegistry>
-            <body>{children}</body>
-          </AntdRegistry>
-      </ReduxProvider>
+      <AntdRegistry>
+        <body>{children}</body>
+      </AntdRegistry>
     </html>
   );
 }

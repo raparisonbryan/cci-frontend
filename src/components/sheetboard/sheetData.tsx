@@ -1,18 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import {fetchSheetData, updateSheetData, updateCell, insertSheet, deleteSheet } from '@/context/sheetSlice';
 import styles from './sheetData.module.scss';
 import EditModal from '@/components/modal/Modal';
 
 export interface SheetDataProps {
     spreadsheetId: string;
     range: string;
-}
-
-interface RootState {
-    sheet: {
-        data: string[][];
-    };
 }
 
 interface RowData {
@@ -26,24 +18,92 @@ interface RowData {
 }
 
 const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
-    const dispatch = useDispatch();
-    const data = useSelector((state: RootState) => state.sheet.data);
+    const [data, setData] = useState<string[][]>([]);
+    const [ws, setWs] = useState<WebSocket | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedRowData, setSelectedRowData] = useState<RowData | null>(null);
     const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const fetchSheetData = async () => {
+        try {
+            const response = await fetch(`/api/sheets?spreadsheetId=${spreadsheetId}&range=${range}`);
+            const sheetData = await response.json();
+            setData(sheetData);
+            setIsLoading(false);
+        } catch (error) {
+            console.error('Error fetching sheet data:', error);
+            setIsLoading(false);
+        }
+    };
 
     useEffect(() => {
-        if (spreadsheetId && range) {
-            dispatch(fetchSheetData({ spreadsheetId, range }) as any);
-        }
-    }, [dispatch, spreadsheetId, range]);
+        fetchSheetData();
 
-    const handleCellChange = (event: React.FocusEvent<HTMLDivElement>, rowIndex: number, cellIndex: number) => {
+        const socket = new WebSocket('ws://localhost:8080');
+
+        socket.onopen = () => {
+            console.log('WebSocket connected');
+            setWs(socket);
+        };
+
+        socket.onmessage = (event) => {
+            const update = JSON.parse(event.data);
+
+            if (update.type === 'UPDATE_CELL') {
+                setData(prevData => {
+                    const newData = [...prevData];
+                    if (newData[update.rowIndex]) {
+                        newData[update.rowIndex][update.cellIndex] = update.value;
+                    }
+                    return newData;
+                });
+            } else if (update.type === 'INSERT_ROW' || update.type === 'DELETE_ROW') {
+                fetchSheetData();
+            }
+        };
+
+        socket.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+
+        return () => {
+            if (socket) socket.close();
+        };
+    }, [spreadsheetId, range]);
+
+    const handleCellChange = async (event: React.FocusEvent<HTMLDivElement>, rowIndex: number, cellIndex: number) => {
         const value = event.target.innerText;
-        dispatch(updateCell({ rowIndex, cellIndex, value }));
+
+        setData(prevData => {
+            const newData = [...prevData];
+            newData[rowIndex][cellIndex] = value;
+            return newData;
+        });
 
         const newRange = `${range.split('!')[0]}!${String.fromCharCode(65 + cellIndex)}${rowIndex + 1}`;
-        dispatch(updateSheetData({ spreadsheetId, range: newRange, values: [[value]] }) as any);
+        await fetch('/api/sheets', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                spreadsheetId,
+                range: newRange,
+                values: [[value]]
+            })
+        });
+
+        if (ws?.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+                type: 'UPDATE_CELL',
+                rowIndex,
+                cellIndex,
+                value,
+                spreadsheetId,
+                range: newRange
+            }));
+        }
     };
 
     const handleRowClick = (rowIndex: number) => {
@@ -61,7 +121,7 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
         setIsModalOpen(true);
     };
 
-    const handleModalSave = (formData: RowData) => {
+    const handleModalSave = async (formData: RowData) => {
         if (selectedRowIndex === null) return;
 
         const updatedValues = [
@@ -74,21 +134,41 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
             formData.observation
         ];
 
-        updatedValues.forEach((value, index) => {
-            const cellIndex = index;
-            dispatch(updateCell({
-                rowIndex: selectedRowIndex,
-                cellIndex,
-                value
-            }));
-
-            const newRange = `${range.split('!')[0]}!${String.fromCharCode(65 + cellIndex)}${selectedRowIndex + 1}`;
-            dispatch(updateSheetData({
-                spreadsheetId,
-                range: newRange,
-                values: [[value]]
-            }) as any);
+        setData(prevData => {
+            const newData = [...prevData];
+            updatedValues.forEach((value, index) => {
+                newData[selectedRowIndex][index] = value;
+            });
+            return newData;
         });
+
+        for (let i = 0; i < updatedValues.length; i++) {
+            const newRange = `${range.split('!')[0]}!${String.fromCharCode(65 + i)}${selectedRowIndex + 1}`;
+            await fetch('/api/sheets', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    spreadsheetId,
+                    range: newRange,
+                    values: [[updatedValues[i]]]
+                })
+            });
+
+            if (ws?.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'UPDATE_CELL',
+                    rowIndex: selectedRowIndex,
+                    cellIndex: i,
+                    value: updatedValues[i],
+                    spreadsheetId,
+                    range: newRange
+                }));
+            }
+        }
+
+        setIsModalOpen(false);
     };
 
     const handleInsertRow = async () => {
@@ -100,20 +180,37 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
             emptyRow[0] = data[selectedRowIndex][0];
             emptyRow[1] = data[selectedRowIndex][1];
 
-            await dispatch(insertSheet({
-                spreadsheetId,
-                range: `${range.split('!')[0]}!A${insertPosition}`,
-            }) as any);
+            await fetch('/api/sheets/insert', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    spreadsheetId,
+                    range: `${range.split('!')[0]}!A${insertPosition}`,
+                })
+            });
 
             const insertRange = `${range.split('!')[0]}!A${insertPosition}:${String.fromCharCode(65 + data[0].length - 1)}${insertPosition}`;
-            await dispatch(updateSheetData({
+            await fetch('/api/sheets', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    spreadsheetId,
+                    range: insertRange,
+                    values: [emptyRow]
+                })
+            });
+
+            ws?.send(JSON.stringify({
+                type: 'INSERT_ROW',
                 spreadsheetId,
-                range: insertRange,
-                values: [emptyRow]
-            }) as any);
+                range
+            }));
 
-            await dispatch(fetchSheetData({ spreadsheetId, range }) as any);
-
+            await fetchSheetData();
             setIsModalOpen(false);
         } catch (error) {
             console.error('Error inserting row:', error);
@@ -124,25 +221,40 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
         if (selectedRowIndex === null) return;
 
         try {
-            await dispatch(deleteSheet({
+            await fetch('/api/sheets/delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    spreadsheetId,
+                    range: `${range.split('!')[0]}!A${selectedRowIndex + 1}`,
+                })
+            });
+
+            ws?.send(JSON.stringify({
+                type: 'DELETE_ROW',
                 spreadsheetId,
-                range: `${range.split('!')[0]}!A${selectedRowIndex + 1}`,
-            }) as any);
+                range
+            }));
 
-            await dispatch(fetchSheetData({ spreadsheetId, range }) as any);
-
+            await fetchSheetData();
             setIsModalOpen(false);
         } catch (error) {
             console.error('Error deleting row:', error);
         }
     };
 
+    if (isLoading) {
+        return <div>Chargement...</div>;
+    }
+
     return (
         <>
             <table className={styles.sheetboard}>
                 <thead>
                 <tr className={styles.sheetboard_row}>
-                    {data[0] && data[0].map((header: string, index: number) => (
+                    {data[0]?.map((header: string, index: number) => (
                         <th className={styles.sheetboard_content} key={index}>{header}</th>
                     ))}
                 </tr>
@@ -189,6 +301,6 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
             />
         </>
     );
-}
+};
 
 export default SheetData;
