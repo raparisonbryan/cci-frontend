@@ -4,7 +4,7 @@ const nextConfig = {
     return [
       {
         source: '/ws',
-        destination: 'http://localhost:8080'
+        destination: process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:8080'
       }
     ];
   }
