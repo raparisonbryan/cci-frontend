@@ -28,7 +28,7 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
 
     const fetchSheetData = useCallback(async () => {
         try {
-            const response = await fetch(`/api/sheets?spreadsheetId=${spreadsheetId}&range=${range}`);
+            const response = await fetch(`https://cci-api.com/api/sheets?spreadsheetId=${spreadsheetId}&range=${range}`);
             const sheetData = await response.json();
             setData(sheetData);
             setIsLoading(false);
@@ -41,7 +41,7 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
     useEffect(() => {
         fetchSheetData();
 
-        const socket = new WebSocket(process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080');
+        const socket = new WebSocket('wss://cci-api.com/socket');
 
         socket.onopen = () => {
             console.log('WebSocket connected');
@@ -83,7 +83,7 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
         });
 
         const newRange = `${range.split('!')[0]}!${String.fromCharCode(65 + cellIndex)}${rowIndex + 1}`;
-        await fetch('/api/sheets', {
+        await fetch('https://cci-api.com/api/sheets', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -145,7 +145,7 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
 
         for (let i = 0; i < updatedValues.length; i++) {
             const newRange = `${range.split('!')[0]}!${String.fromCharCode(65 + i)}${selectedRowIndex + 1}`;
-            await fetch('/api/sheets', {
+            await fetch('https://cci-api.com/api/sheets', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -181,7 +181,7 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
             emptyRow[0] = data[selectedRowIndex][0];
             emptyRow[1] = data[selectedRowIndex][1];
 
-            await fetch('/api/sheets/insert', {
+            await fetch('https://cci-api.com/api/sheets/insert', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -193,7 +193,7 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
             });
 
             const insertRange = `${range.split('!')[0]}!A${insertPosition}:${String.fromCharCode(65 + data[0].length - 1)}${insertPosition}`;
-            await fetch('/api/sheets', {
+            await fetch('https://cci-api.com/api/sheets', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -222,7 +222,7 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
         if (selectedRowIndex === null) return;
 
         try {
-            await fetch('/api/sheets/delete', {
+            await fetch('https://cci-api.com/api/sheets/delete', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
