@@ -8,6 +8,13 @@
     color: white;
 }
 
+.dashboard_mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+    color: white;
+}
+
 .title_wrapper {
     display: flex;
     align-items: center;

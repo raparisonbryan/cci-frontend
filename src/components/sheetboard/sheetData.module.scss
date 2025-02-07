@@ -8,6 +8,10 @@
         position: sticky;
         top: 0;
     }
+
+    @media (max-width: 1200px) {
+        padding: 0;
+    }
 }
 
 .sheetboard_row {
@@ -18,6 +22,10 @@
 
     &:hover {
         background: #F5F5F5;
+    }
+
+    @media (max-width: 1200px) {
+        min-width: 1000px;
     }
 }
 
