@@ -2,6 +2,7 @@ import React, {useCallback, useEffect, useState} from 'react';
 import styles from './sheetData.module.scss';
 import EditModal from '@/components/modal/Modal';
 import { Skeleton } from "antd";
+import { useSession } from 'next-auth/react';
 
 export interface SheetDataProps {
     spreadsheetId: string;
@@ -19,6 +20,9 @@ interface RowData {
 }
 
 const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
+    const { data: session } = useSession();
+    const isAdmin = session?.user?.role === 'admin';
+
     const [data, setData] = useState<string[][]>([]);
     const [ws, setWs] = useState<WebSocket | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -219,6 +223,13 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
     };
 
     const handleDeleteRow = async () => {
+        // Vérification que l'utilisateur est admin avant de permettre la suppression
+        if (!isAdmin) {
+            console.error('Permission denied: Only administrators can delete rows');
+            alert('Seuls les administrateurs peuvent supprimer des lignes');
+            return;
+        }
+
         if (selectedRowIndex === null) return;
 
         try {
@@ -246,28 +257,36 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
         }
     };
 
+    // Détermine si une cellule doit être éditable
+    const isCellEditable = (cellIndex: number, cellContent: string) => {
+        if (!isAdmin && cellContent && cellContent.trim().length > 0) {
+            return false; // Non éditable si l'utilisateur n'est pas admin et la cellule contient déjà du texte
+        }
+        return cellIndex > 1; // Les deux premières colonnes ne sont pas éditables (comme dans votre code original)
+    };
+
     if (isLoading) {
         return (
             <table className={styles.sheetboard}>
                 <thead>
-                    <tr className={styles.sheetboard_row}>
-                        <th className={styles.sheetboard_content}>Date</th>
-                        <th className={styles.sheetboard_content}>Jour</th>
-                        <th className={styles.sheetboard_content}>Sélection</th>
-                        <th className={styles.sheetboard_content}>Évènement</th>
-                        <th className={styles.sheetboard_content}>Client</th>
-                        <th className={styles.sheetboard_content}>Contact</th>
-                        <th className={styles.sheetboard_content}>Observation</th>
-                    </tr>
+                <tr className={styles.sheetboard_row}>
+                    <th className={styles.sheetboard_content}>Date</th>
+                    <th className={styles.sheetboard_content}>Jour</th>
+                    <th className={styles.sheetboard_content}>Sélection</th>
+                    <th className={styles.sheetboard_content}>Évènement</th>
+                    <th className={styles.sheetboard_content}>Client</th>
+                    <th className={styles.sheetboard_content}>Contact</th>
+                    <th className={styles.sheetboard_content}>Observation</th>
+                </tr>
                 </thead>
                 <tbody>
-                    {[...Array(10)].map((_, index) => (
-                        <tr key={index} className={styles.skeleton}>
-                            <td className={styles.skeleton}>
-                                <Skeleton.Input block={true} active />
-                            </td>
-                        </tr>
-                    ))}
+                {[...Array(10)].map((_, index) => (
+                    <tr key={index} className={styles.skeleton}>
+                        <td className={styles.skeleton}>
+                            <Skeleton.Input block={true} active />
+                        </td>
+                    </tr>
+                ))}
                 </tbody>
             </table>
         );
@@ -275,13 +294,21 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
 
     return (
         <>
+            {!isAdmin && (
+                <div className={styles.userMessage}>
+                    <p className={styles.infoText}>
+                        Vous ne pouvez pas modifier les champs qui contiennent déjà du texte.
+                    </p>
+                </div>
+            )}
+
             <table className={styles.sheetboard}>
                 <thead>
-                    <tr className={styles.sheetboard_row}>
-                        {data[0]?.map((header: string, index: number) => (
-                            <th className={styles.sheetboard_content} key={index}>{header}</th>
-                        ))}
-                    </tr>
+                <tr className={styles.sheetboard_row}>
+                    {data[0]?.map((header: string, index: number) => (
+                        <th className={styles.sheetboard_content} key={index}>{header}</th>
+                    ))}
+                </tr>
                 </thead>
                 <tbody>
                 {data.slice(1).map((row: string[], rowIndex: number) => (
@@ -296,12 +323,12 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
                                 key={cellIndex}
                             >
                                 <div
-                                    contentEditable={cellIndex > 1}
+                                    contentEditable={isCellEditable(cellIndex, cell)}
                                     suppressContentEditableWarning
-                                    onBlur={(e) => cellIndex > 1 && handleCellChange(e, rowIndex + 1, cellIndex)}
-                                    className={styles.editableCell}
+                                    onBlur={(e) => isCellEditable(cellIndex, cell) && handleCellChange(e, rowIndex + 1, cellIndex)}
+                                    className={`${styles.editableCell} ${!isCellEditable(cellIndex, cell) && cellIndex > 1 ? styles.readOnly : ''}`}
                                     onClick={(e) => {
-                                        if (cellIndex > 1) {
+                                        if (isCellEditable(cellIndex, cell)) {
                                             e.stopPropagation();
                                         }
                                     }}

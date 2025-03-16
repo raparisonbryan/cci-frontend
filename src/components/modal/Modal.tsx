@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import styles from './Modal.module.scss';
+import { useSession } from 'next-auth/react';
 
 interface EditModalProps {
     isOpen: boolean;
@@ -27,14 +28,10 @@ interface EditModalProps {
     }) => void;
 }
 
-const EditModal: React.FC<EditModalProps> = ({
-    isOpen,
-    onClose,
-    rowData,
-    onInsertRow,
-    onDeleteRow,
-    onSave
-}) => {
+const EditModal: React.FC<EditModalProps> = ({isOpen, onClose, rowData, onInsertRow, onDeleteRow, onSave}) => {
+    const { data: session } = useSession();
+    const isAdmin = session?.user?.role === 'admin';
+
     const [formData, setFormData] = useState({
         date: '',
         jour: '',
@@ -74,6 +71,10 @@ const EditModal: React.FC<EditModalProps> = ({
     if (!isOpen) return null;
 
     const handleChange = (field: string) => (e: { target: { value: any; }; }) => {
+        if (!isAdmin && rowData[field as keyof typeof rowData]) {
+            return;
+        }
+
         setFormData(prev => ({
             ...prev,
             [field]: e.target.value
@@ -100,6 +101,10 @@ const EditModal: React.FC<EditModalProps> = ({
         onClose();
     };
 
+    const isReadOnly = (field: string) => {
+        return !isAdmin && !!rowData[field as keyof typeof rowData];
+    };
+
     const modalContent = (
         <div className={styles.modalOverlay} onClick={onClose}>
             <div className={styles.modalContent} onClick={handleModalClick}>
@@ -115,6 +120,8 @@ const EditModal: React.FC<EditModalProps> = ({
                             <input
                                 value={formData.date}
                                 onChange={handleChange('date')}
+                                readOnly={isReadOnly('date')}
+                                className={isReadOnly('date') ? styles.readOnly : ''}
                             />
                         </div>
                         <div className={styles.formGroup}>
@@ -122,6 +129,8 @@ const EditModal: React.FC<EditModalProps> = ({
                             <input
                                 value={formData.jour}
                                 onChange={handleChange('jour')}
+                                readOnly={isReadOnly('jour')}
+                                className={isReadOnly('jour') ? styles.readOnly : ''}
                             />
                         </div>
                     </div>
@@ -131,6 +140,8 @@ const EditModal: React.FC<EditModalProps> = ({
                         <textarea
                             value={formData.selection}
                             onChange={handleChange('selection')}
+                            readOnly={isReadOnly('selection')}
+                            className={isReadOnly('selection') ? styles.readOnly : ''}
                         />
                     </div>
 
@@ -139,6 +150,8 @@ const EditModal: React.FC<EditModalProps> = ({
                         <textarea
                             value={formData.evenement}
                             onChange={handleChange('evenement')}
+                            readOnly={isReadOnly('evenement')}
+                            className={isReadOnly('evenement') ? styles.readOnly : ''}
                         />
                     </div>
 
@@ -147,6 +160,8 @@ const EditModal: React.FC<EditModalProps> = ({
                         <textarea
                             value={formData.client}
                             onChange={handleChange('client')}
+                            readOnly={isReadOnly('client')}
+                            className={isReadOnly('client') ? styles.readOnly : ''}
                         />
                     </div>
 
@@ -155,6 +170,8 @@ const EditModal: React.FC<EditModalProps> = ({
                         <textarea
                             value={formData.contact}
                             onChange={handleChange('contact')}
+                            readOnly={isReadOnly('contact')}
+                            className={isReadOnly('contact') ? styles.readOnly : ''}
                         />
                     </div>
 
@@ -163,14 +180,24 @@ const EditModal: React.FC<EditModalProps> = ({
                         <textarea
                             value={formData.observation}
                             onChange={handleChange('observation')}
+                            readOnly={isReadOnly('observation')}
+                            className={isReadOnly('observation') ? styles.readOnly : ''}
                         />
                     </div>
 
+                    {!isAdmin && (
+                        <div className={styles.userMessage}>
+                            <p className={styles.infoText}>Vous ne pouvez pas modifier les champs qui contiennent déjà du texte.</p>
+                        </div>
+                    )}
+
                     <div className={styles.modalFooter}>
                         <div>
-                            <button type="button" className={styles.deleteButton} onClick={handleDeleteRow}>
-                                Supprimer
-                            </button>
+                            {isAdmin && (
+                                <button type="button" className={styles.deleteButton} onClick={handleDeleteRow}>
+                                    Supprimer
+                                </button>
+                            )}
                             <button type="button" className={styles.insertButton} onClick={handleInsertRow}>
                                 Ajouter
                             </button>

@@ -1,6 +1,11 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 
+const adminEmails = [
+    "raparisonbryan@yahoo.fr",
+    "raveloarison.tiana@gmail.com"
+];
+
 const handler = NextAuth({
     providers: [
         Google({
@@ -10,14 +15,16 @@ const handler = NextAuth({
     ],
     callbacks: {
         async session({ session, token }) {
-            if (session.user && token.sub) {
-                session.user.id = token.sub;
+            if (session.user) {
+                session.user.id = token.sub as string;
+                session.user.role = token.role as string;
             }
             return session;
         },
-        async jwt({ token, user }) {
-            if (user) {
-                token.id = user.id;
+        async jwt({ token, user, account }) {
+            if (user && account) {
+                const isAdmin = adminEmails.includes(user.email?.toLowerCase() || '');
+                token.role = isAdmin ? 'admin' : 'user';
             }
             return token;
         },
@@ -25,3 +32,4 @@ const handler = NextAuth({
 });
 
 export { handler as GET, handler as POST };
+
