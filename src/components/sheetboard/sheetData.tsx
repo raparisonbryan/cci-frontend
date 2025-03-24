@@ -2,6 +2,8 @@ import React, {useCallback, useEffect, useState} from 'react';
 import styles from './sheetData.module.scss';
 import EditModal from '@/components/modal/Modal';
 import { Skeleton } from "antd";
+import { useSession } from 'next-auth/react';
+import { useWebSocket } from '@/hooks/useWebSocket';
 
 export interface SheetDataProps {
     spreadsheetId: string;
@@ -19,8 +21,10 @@ interface RowData {
 }
 
 const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
+    const { data: session } = useSession();
+    const isAdmin = session?.user?.role === 'admin';
+    const { ws, isConnected, sendMessage } = useWebSocket();
     const [data, setData] = useState<string[][]>([]);
-    const [ws, setWs] = useState<WebSocket | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedRowData, setSelectedRowData] = useState<RowData | null>(null);
     const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
@@ -39,39 +43,34 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
     }, [spreadsheetId, range]);
 
     useEffect(() => {
+        if (ws) {
+            const messageHandler = (event: MessageEvent) => {
+                const update = JSON.parse(event.data);
+
+                if (update.type === 'UPDATE_CELL') {
+                    setData(prevData => {
+                        const newData = [...prevData];
+                        if (newData[update.rowIndex]) {
+                            newData[update.rowIndex][update.cellIndex] = update.value;
+                        }
+                        return newData;
+                    });
+                } else if (update.type === 'INSERT_ROW' || update.type === 'DELETE_ROW') {
+                    fetchSheetData();
+                }
+            };
+
+            ws.addEventListener('message', messageHandler);
+
+            return () => {
+                ws.removeEventListener('message', messageHandler);
+            };
+        }
+    }, [ws, fetchSheetData]);
+
+    useEffect(() => {
         fetchSheetData();
-
-        const socket = new WebSocket('wss://cci-api.com/socket');
-
-        socket.onopen = () => {
-            console.log('WebSocket connected');
-            setWs(socket);
-        };
-
-        socket.onmessage = (event) => {
-            const update = JSON.parse(event.data);
-
-            if (update.type === 'UPDATE_CELL') {
-                setData(prevData => {
-                    const newData = [...prevData];
-                    if (newData[update.rowIndex]) {
-                        newData[update.rowIndex][update.cellIndex] = update.value;
-                    }
-                    return newData;
-                });
-            } else if (update.type === 'INSERT_ROW' || update.type === 'DELETE_ROW') {
-                fetchSheetData();
-            }
-        };
-
-        socket.onerror = (error) => {
-            console.error('WebSocket error:', error);
-        };
-
-        return () => {
-            if (socket) socket.close();
-        };
-    }, [spreadsheetId, range, fetchSheetData]);
+    }, [fetchSheetData]);
 
     const handleCellChange = async (event: React.FocusEvent<HTMLDivElement>, rowIndex: number, cellIndex: number) => {
         const value = event.target.innerText;
@@ -95,15 +94,33 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
             })
         });
 
-        if (ws?.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({
+        if (isConnected) {
+            sendMessage({
                 type: 'UPDATE_CELL',
                 rowIndex,
                 cellIndex,
                 value,
                 spreadsheetId,
-                range: newRange
-            }));
+                range: newRange,
+                sheetName: range.split('!')[0],
+                cellReference: `${String.fromCharCode(65 + cellIndex)}${rowIndex + 1}`,
+                fieldName: cellIndex < data[0].length ? data[0][cellIndex] : `Colonne ${cellIndex + 1}`
+            });
+
+            saveChangeToLocalHistory({
+                type: 'UPDATE_CELL',
+                user: session?.user?.name || 'Utilisateur inconnu',
+                userEmail: session?.user?.email,
+                userImage: session?.user?.image,
+                timestamp: new Date().toISOString(),
+                spreadsheetId,
+                range: newRange,
+                rowIndex,
+                cellIndex,
+                value,
+                cellReference: `${String.fromCharCode(65 + cellIndex)}${rowIndex + 1}`,
+                fieldName: cellIndex < data[0].length ? data[0][cellIndex] : `Colonne ${cellIndex + 1}`
+            });
         }
     };
 
@@ -143,6 +160,8 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
             return newData;
         });
 
+        const fieldNames = ['date', 'jour', 'selection', 'evenement', 'client', 'contact', 'observation'];
+
         for (let i = 0; i < updatedValues.length; i++) {
             const newRange = `${range.split('!')[0]}!${String.fromCharCode(65 + i)}${selectedRowIndex + 1}`;
             await fetch('https://cci-api.com/api/sheets', {
@@ -157,15 +176,35 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
                 })
             });
 
-            if (ws?.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({
+            if (isConnected) {
+                sendMessage({
                     type: 'UPDATE_CELL',
                     rowIndex: selectedRowIndex,
                     cellIndex: i,
                     value: updatedValues[i],
                     spreadsheetId,
-                    range: newRange
-                }));
+                    range: newRange,
+                    sheetName: range.split('!')[0],
+                    cellReference: `${String.fromCharCode(65 + i)}${selectedRowIndex + 1}`,
+                    fieldName: fieldNames[i],
+                    source: 'modal'
+                });
+
+                saveChangeToLocalHistory({
+                    type: 'UPDATE_CELL',
+                    user: session?.user?.name || 'Utilisateur inconnu',
+                    userEmail: session?.user?.email,
+                    userImage: session?.user?.image,
+                    timestamp: new Date().toISOString(),
+                    spreadsheetId,
+                    range: newRange,
+                    rowIndex: selectedRowIndex,
+                    cellIndex: i,
+                    value: updatedValues[i],
+                    cellReference: `${String.fromCharCode(65 + i)}${selectedRowIndex + 1}`,
+                    fieldName: fieldNames[i],
+                    source: 'modal'
+                });
             }
         }
 
@@ -205,11 +244,29 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
                 })
             });
 
-            ws?.send(JSON.stringify({
-                type: 'INSERT_ROW',
-                spreadsheetId,
-                range
-            }));
+            if (isConnected) {
+                sendMessage({
+                    type: 'INSERT_ROW',
+                    spreadsheetId,
+                    range: insertRange,
+                    sheetName: range.split('!')[0],
+                    position: insertPosition,
+                    rowReference: `Ligne ${insertPosition}`
+                });
+
+                saveChangeToLocalHistory({
+                    type: 'INSERT_ROW',
+                    user: session?.user?.name || 'Utilisateur inconnu',
+                    userEmail: session?.user?.email,
+                    userImage: session?.user?.image,
+                    timestamp: new Date().toISOString(),
+                    spreadsheetId,
+                    range: insertRange,
+                    position: insertPosition,
+                    sheetName: range.split('!')[0],
+                    rowReference: `Ligne ${insertPosition}`
+                });
+            }
 
             await fetchSheetData();
             setIsModalOpen(false);
@@ -219,9 +276,17 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
     };
 
     const handleDeleteRow = async () => {
+        if (!isAdmin) {
+            console.error('Permission denied: Only administrators can delete rows');
+            alert('Seuls les administrateurs peuvent supprimer des lignes');
+            return;
+        }
+
         if (selectedRowIndex === null) return;
 
         try {
+            const deleteRange = `${range.split('!')[0]}!A${selectedRowIndex + 1}`;
+
             await fetch('https://cci-api.com/api/sheets/delete', {
                 method: 'POST',
                 headers: {
@@ -229,15 +294,33 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
                 },
                 body: JSON.stringify({
                     spreadsheetId,
-                    range: `${range.split('!')[0]}!A${selectedRowIndex + 1}`,
+                    range: deleteRange,
                 })
             });
 
-            ws?.send(JSON.stringify({
-                type: 'DELETE_ROW',
-                spreadsheetId,
-                range
-            }));
+            if (isConnected) {
+                sendMessage({
+                    type: 'DELETE_ROW',
+                    spreadsheetId,
+                    range: deleteRange,
+                    sheetName: range.split('!')[0],
+                    rowIndex: selectedRowIndex,
+                    rowReference: `Ligne ${selectedRowIndex + 1}`
+                });
+
+                saveChangeToLocalHistory({
+                    type: 'DELETE_ROW',
+                    user: session?.user?.name || 'Utilisateur inconnu',
+                    userEmail: session?.user?.email,
+                    userImage: session?.user?.image,
+                    timestamp: new Date().toISOString(),
+                    spreadsheetId,
+                    range: deleteRange,
+                    rowIndex: selectedRowIndex,
+                    sheetName: range.split('!')[0],
+                    rowReference: `Ligne ${selectedRowIndex + 1}`
+                });
+            }
 
             await fetchSheetData();
             setIsModalOpen(false);
@@ -246,28 +329,55 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
         }
     };
 
+    const saveChangeToLocalHistory = (changeData: any) => {
+        try {
+            const changeId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+            const existingChanges = localStorage.getItem('recentChanges');
+            let changesArray = existingChanges ? JSON.parse(existingChanges) : [];
+
+            changesArray.unshift({
+                id: changeId,
+                ...changeData
+            });
+
+            changesArray = changesArray.slice(0, 50);
+
+            localStorage.setItem('recentChanges', JSON.stringify(changesArray));
+        } catch (error) {
+            console.error('Erreur lors de l\'enregistrement de la modification dans l\'historique local:', error);
+        }
+    };
+
+    const isCellEditable = (cellIndex: number, cellContent: string) => {
+        if (!isAdmin && cellContent && cellContent.trim().length > 0) {
+            return false;
+        }
+        return cellIndex > 1;
+    };
+
     if (isLoading) {
         return (
             <table className={styles.sheetboard}>
                 <thead>
-                    <tr className={styles.sheetboard_row}>
-                        <th className={styles.sheetboard_content}>Date</th>
-                        <th className={styles.sheetboard_content}>Jour</th>
-                        <th className={styles.sheetboard_content}>Sélection</th>
-                        <th className={styles.sheetboard_content}>Évènement</th>
-                        <th className={styles.sheetboard_content}>Client</th>
-                        <th className={styles.sheetboard_content}>Contact</th>
-                        <th className={styles.sheetboard_content}>Observation</th>
-                    </tr>
+                <tr className={styles.sheetboard_row}>
+                    <th className={styles.sheetboard_content}>Date</th>
+                    <th className={styles.sheetboard_content}>Jour</th>
+                    <th className={styles.sheetboard_content}>Sélection</th>
+                    <th className={styles.sheetboard_content}>Évènement</th>
+                    <th className={styles.sheetboard_content}>Client</th>
+                    <th className={styles.sheetboard_content}>Contact</th>
+                    <th className={styles.sheetboard_content}>Observation</th>
+                </tr>
                 </thead>
                 <tbody>
-                    {[...Array(10)].map((_, index) => (
-                        <tr key={index} className={styles.skeleton}>
-                            <td className={styles.skeleton}>
-                                <Skeleton.Input block={true} active />
-                            </td>
-                        </tr>
-                    ))}
+                {[...Array(10)].map((_, index) => (
+                    <tr key={index} className={styles.skeleton}>
+                        <td className={styles.skeleton}>
+                            <Skeleton.Input block={true} active />
+                        </td>
+                    </tr>
+                ))}
                 </tbody>
             </table>
         );
@@ -275,13 +385,21 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
 
     return (
         <>
+            {!isAdmin && (
+                <div className={styles.userMessage}>
+                    <p className={styles.infoText}>
+                        Vous ne pouvez pas modifier les champs qui contiennent déjà du texte.
+                    </p>
+                </div>
+            )}
+
             <table className={styles.sheetboard}>
                 <thead>
-                    <tr className={styles.sheetboard_row}>
-                        {data[0]?.map((header: string, index: number) => (
-                            <th className={styles.sheetboard_content} key={index}>{header}</th>
-                        ))}
-                    </tr>
+                <tr className={styles.sheetboard_row}>
+                    {data[0]?.map((header: string, index: number) => (
+                        <th className={styles.sheetboard_content} key={index}>{header}</th>
+                    ))}
+                </tr>
                 </thead>
                 <tbody>
                 {data.slice(1).map((row: string[], rowIndex: number) => (
@@ -296,12 +414,12 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
                                 key={cellIndex}
                             >
                                 <div
-                                    contentEditable={cellIndex > 1}
+                                    contentEditable={isCellEditable(cellIndex, cell)}
                                     suppressContentEditableWarning
-                                    onBlur={(e) => cellIndex > 1 && handleCellChange(e, rowIndex + 1, cellIndex)}
-                                    className={styles.editableCell}
+                                    onBlur={(e) => isCellEditable(cellIndex, cell) && handleCellChange(e, rowIndex + 1, cellIndex)}
+                                    className={`${styles.editableCell} ${!isCellEditable(cellIndex, cell) && cellIndex > 1 ? styles.readOnly : ''}`}
                                     onClick={(e) => {
-                                        if (cellIndex > 1) {
+                                        if (isCellEditable(cellIndex, cell)) {
                                             e.stopPropagation();
                                         }
                                     }}

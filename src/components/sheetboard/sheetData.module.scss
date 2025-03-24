@@ -7,6 +7,7 @@
     thead {
         position: sticky;
         top: 0;
+        z-index: 999;
     }
 
     @media (max-width: 1200px) {
@@ -115,4 +116,26 @@ thead {
 
 .skeleton {
     width: 100%;
+}
+
+.readOnly {
+    background-color: #f8f9fa;
+    border-color: #e2e6ea;
+    color: #495057;
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+
+.userMessage {
+    background-color: #fff3cd;
+    border: 1px solid #ffeeba;
+    color: #856404;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+}
+
+.infoText {
+    margin: 0;
+    font-size: 14px;
 }
