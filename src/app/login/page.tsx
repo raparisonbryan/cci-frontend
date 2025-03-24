@@ -1,20 +1,14 @@
 "use client"
 
-import {signIn} from "next-auth/react";
 import styles from "./page.module.scss";
 import bg from "@/assets/cci.png";
 import Image from "next/image";
 import Img from "@/components/image/Img";
 import logo from "@/assets/cci_logo_white.png";
-import {useSearchParams} from "next/navigation";
+import LoginForm from "@/components/login/LoginForm";
+import {Suspense} from "react";
 
 const Login = () => {
-    const searchParams = useSearchParams();
-    const callbackUrl = searchParams.get('callbackUrl') || '/';
-
-    const handleLogin = () => {
-        signIn("google", { callbackUrl });
-    }
 
     return (
         <div className={styles.container}>
@@ -23,9 +17,9 @@ const Login = () => {
             </div>
             <div className={styles.modal_wrapper}>
                 <div className={styles.modal}>
-                    <h1>Se connecter</h1>
-                    <p>Connectez-vous pour accéder au planning</p>
-                    <button onClick={handleLogin}>Se connecter</button>
+                    <Suspense fallback={<p>Chargement...</p>}>
+                        <LoginForm />
+                    </Suspense>
                 </div>
             </div>
             <div className={styles.bg_wrapper}>
