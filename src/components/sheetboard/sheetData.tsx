@@ -3,6 +3,7 @@ import styles from './sheetData.module.scss';
 import EditModal from '@/components/modal/Modal';
 import { Skeleton } from "antd";
 import { useSession } from 'next-auth/react';
+import { useWebSocket } from '@/hooks/useWebSocket';
 
 export interface SheetDataProps {
     spreadsheetId: string;
@@ -22,9 +23,8 @@ interface RowData {
 const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
     const { data: session } = useSession();
     const isAdmin = session?.user?.role === 'admin';
-
+    const { ws, isConnected, sendMessage } = useWebSocket();
     const [data, setData] = useState<string[][]>([]);
-    const [ws, setWs] = useState<WebSocket | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedRowData, setSelectedRowData] = useState<RowData | null>(null);
     const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
@@ -43,39 +43,34 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
     }, [spreadsheetId, range]);
 
     useEffect(() => {
+        if (ws) {
+            const messageHandler = (event: MessageEvent) => {
+                const update = JSON.parse(event.data);
+
+                if (update.type === 'UPDATE_CELL') {
+                    setData(prevData => {
+                        const newData = [...prevData];
+                        if (newData[update.rowIndex]) {
+                            newData[update.rowIndex][update.cellIndex] = update.value;
+                        }
+                        return newData;
+                    });
+                } else if (update.type === 'INSERT_ROW' || update.type === 'DELETE_ROW') {
+                    fetchSheetData();
+                }
+            };
+
+            ws.addEventListener('message', messageHandler);
+
+            return () => {
+                ws.removeEventListener('message', messageHandler);
+            };
+        }
+    }, [ws, fetchSheetData]);
+
+    useEffect(() => {
         fetchSheetData();
-
-        const socket = new WebSocket('wss://cci-api.com/socket');
-
-        socket.onopen = () => {
-            console.log('WebSocket connected');
-            setWs(socket);
-        };
-
-        socket.onmessage = (event) => {
-            const update = JSON.parse(event.data);
-
-            if (update.type === 'UPDATE_CELL') {
-                setData(prevData => {
-                    const newData = [...prevData];
-                    if (newData[update.rowIndex]) {
-                        newData[update.rowIndex][update.cellIndex] = update.value;
-                    }
-                    return newData;
-                });
-            } else if (update.type === 'INSERT_ROW' || update.type === 'DELETE_ROW') {
-                fetchSheetData();
-            }
-        };
-
-        socket.onerror = (error) => {
-            console.error('WebSocket error:', error);
-        };
-
-        return () => {
-            if (socket) socket.close();
-        };
-    }, [spreadsheetId, range, fetchSheetData]);
+    }, [fetchSheetData]);
 
     const handleCellChange = async (event: React.FocusEvent<HTMLDivElement>, rowIndex: number, cellIndex: number) => {
         const value = event.target.innerText;
@@ -99,15 +94,15 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
             })
         });
 
-        if (ws?.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({
+        if (isConnected) {
+            sendMessage({
                 type: 'UPDATE_CELL',
                 rowIndex,
                 cellIndex,
                 value,
                 spreadsheetId,
                 range: newRange
-            }));
+            });
         }
     };
 
@@ -161,15 +156,15 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
                 })
             });
 
-            if (ws?.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({
+            if (isConnected) {
+                sendMessage({
                     type: 'UPDATE_CELL',
                     rowIndex: selectedRowIndex,
                     cellIndex: i,
                     value: updatedValues[i],
                     spreadsheetId,
                     range: newRange
-                }));
+                });
             }
         }
 
@@ -209,11 +204,13 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
                 })
             });
 
-            ws?.send(JSON.stringify({
-                type: 'INSERT_ROW',
-                spreadsheetId,
-                range
-            }));
+            if (isConnected) {
+                sendMessage({
+                    type: 'INSERT_ROW',
+                    spreadsheetId,
+                    range
+                });
+            }
 
             await fetchSheetData();
             setIsModalOpen(false);
@@ -223,7 +220,6 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
     };
 
     const handleDeleteRow = async () => {
-        // Vérification que l'utilisateur est admin avant de permettre la suppression
         if (!isAdmin) {
             console.error('Permission denied: Only administrators can delete rows');
             alert('Seuls les administrateurs peuvent supprimer des lignes');
@@ -244,11 +240,13 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
                 })
             });
 
-            ws?.send(JSON.stringify({
-                type: 'DELETE_ROW',
-                spreadsheetId,
-                range
-            }));
+            if (isConnected) {
+                sendMessage({
+                    type: 'DELETE_ROW',
+                    spreadsheetId,
+                    range
+                });
+            }
 
             await fetchSheetData();
             setIsModalOpen(false);
@@ -257,12 +255,11 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
         }
     };
 
-    // Détermine si une cellule doit être éditable
     const isCellEditable = (cellIndex: number, cellContent: string) => {
         if (!isAdmin && cellContent && cellContent.trim().length > 0) {
-            return false; // Non éditable si l'utilisateur n'est pas admin et la cellule contient déjà du texte
+            return false;
         }
-        return cellIndex > 1; // Les deux premières colonnes ne sont pas éditables (comme dans votre code original)
+        return cellIndex > 1;
     };
 
     if (isLoading) {
