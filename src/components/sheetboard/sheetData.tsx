@@ -101,7 +101,25 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
                 cellIndex,
                 value,
                 spreadsheetId,
-                range: newRange
+                range: newRange,
+                sheetName: range.split('!')[0],
+                cellReference: `${String.fromCharCode(65 + cellIndex)}${rowIndex + 1}`,
+                fieldName: cellIndex < data[0].length ? data[0][cellIndex] : `Colonne ${cellIndex + 1}`
+            });
+
+            saveChangeToLocalHistory({
+                type: 'UPDATE_CELL',
+                user: session?.user?.name || 'Utilisateur inconnu',
+                userEmail: session?.user?.email,
+                userImage: session?.user?.image,
+                timestamp: new Date().toISOString(),
+                spreadsheetId,
+                range: newRange,
+                rowIndex,
+                cellIndex,
+                value,
+                cellReference: `${String.fromCharCode(65 + cellIndex)}${rowIndex + 1}`,
+                fieldName: cellIndex < data[0].length ? data[0][cellIndex] : `Colonne ${cellIndex + 1}`
             });
         }
     };
@@ -142,6 +160,8 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
             return newData;
         });
 
+        const fieldNames = ['date', 'jour', 'selection', 'evenement', 'client', 'contact', 'observation'];
+
         for (let i = 0; i < updatedValues.length; i++) {
             const newRange = `${range.split('!')[0]}!${String.fromCharCode(65 + i)}${selectedRowIndex + 1}`;
             await fetch('https://cci-api.com/api/sheets', {
@@ -163,7 +183,27 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
                     cellIndex: i,
                     value: updatedValues[i],
                     spreadsheetId,
-                    range: newRange
+                    range: newRange,
+                    sheetName: range.split('!')[0],
+                    cellReference: `${String.fromCharCode(65 + i)}${selectedRowIndex + 1}`,
+                    fieldName: fieldNames[i],
+                    source: 'modal'
+                });
+
+                saveChangeToLocalHistory({
+                    type: 'UPDATE_CELL',
+                    user: session?.user?.name || 'Utilisateur inconnu',
+                    userEmail: session?.user?.email,
+                    userImage: session?.user?.image,
+                    timestamp: new Date().toISOString(),
+                    spreadsheetId,
+                    range: newRange,
+                    rowIndex: selectedRowIndex,
+                    cellIndex: i,
+                    value: updatedValues[i],
+                    cellReference: `${String.fromCharCode(65 + i)}${selectedRowIndex + 1}`,
+                    fieldName: fieldNames[i],
+                    source: 'modal'
                 });
             }
         }
@@ -208,7 +248,23 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
                 sendMessage({
                     type: 'INSERT_ROW',
                     spreadsheetId,
-                    range
+                    range: insertRange,
+                    sheetName: range.split('!')[0],
+                    position: insertPosition,
+                    rowReference: `Ligne ${insertPosition}`
+                });
+
+                saveChangeToLocalHistory({
+                    type: 'INSERT_ROW',
+                    user: session?.user?.name || 'Utilisateur inconnu',
+                    userEmail: session?.user?.email,
+                    userImage: session?.user?.image,
+                    timestamp: new Date().toISOString(),
+                    spreadsheetId,
+                    range: insertRange,
+                    position: insertPosition,
+                    sheetName: range.split('!')[0],
+                    rowReference: `Ligne ${insertPosition}`
                 });
             }
 
@@ -229,6 +285,8 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
         if (selectedRowIndex === null) return;
 
         try {
+            const deleteRange = `${range.split('!')[0]}!A${selectedRowIndex + 1}`;
+
             await fetch('https://cci-api.com/api/sheets/delete', {
                 method: 'POST',
                 headers: {
@@ -236,7 +294,7 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
                 },
                 body: JSON.stringify({
                     spreadsheetId,
-                    range: `${range.split('!')[0]}!A${selectedRowIndex + 1}`,
+                    range: deleteRange,
                 })
             });
 
@@ -244,7 +302,23 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
                 sendMessage({
                     type: 'DELETE_ROW',
                     spreadsheetId,
-                    range
+                    range: deleteRange,
+                    sheetName: range.split('!')[0],
+                    rowIndex: selectedRowIndex,
+                    rowReference: `Ligne ${selectedRowIndex + 1}`
+                });
+
+                saveChangeToLocalHistory({
+                    type: 'DELETE_ROW',
+                    user: session?.user?.name || 'Utilisateur inconnu',
+                    userEmail: session?.user?.email,
+                    userImage: session?.user?.image,
+                    timestamp: new Date().toISOString(),
+                    spreadsheetId,
+                    range: deleteRange,
+                    rowIndex: selectedRowIndex,
+                    sheetName: range.split('!')[0],
+                    rowReference: `Ligne ${selectedRowIndex + 1}`
                 });
             }
 
@@ -252,6 +326,26 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
             setIsModalOpen(false);
         } catch (error) {
             console.error('Error deleting row:', error);
+        }
+    };
+
+    const saveChangeToLocalHistory = (changeData: any) => {
+        try {
+            const changeId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+            const existingChanges = localStorage.getItem('recentChanges');
+            let changesArray = existingChanges ? JSON.parse(existingChanges) : [];
+
+            changesArray.unshift({
+                id: changeId,
+                ...changeData
+            });
+
+            changesArray = changesArray.slice(0, 50);
+
+            localStorage.setItem('recentChanges', JSON.stringify(changesArray));
+        } catch (error) {
+            console.error('Erreur lors de l\'enregistrement de la modification dans l\'historique local:', error);
         }
     };
 
