@@ -1,6 +1,12 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 
+const authorizedEmails = [
+    "raparisonbryan@yahoo.fr",
+    "raveloarison.tiana@gmail.com",
+    "cci.madeco2023@gmail.com"
+];
+
 const adminEmails = [
     "raparisonbryan@yahoo.fr",
     "raveloarison.tiana@gmail.com"
@@ -14,6 +20,10 @@ const handler = NextAuth({
         }),
     ],
     callbacks: {
+        async signIn({ user }) {
+            return authorizedEmails.includes(user.email?.toLowerCase() || '');
+        },
+
         async session({ session, token }) {
             if (session.user) {
                 session.user.id = token.sub as string;
@@ -29,7 +39,10 @@ const handler = NextAuth({
             return token;
         },
     },
+    pages: {
+        signIn: '/login',
+        error: '/login',
+    },
 });
 
 export { handler as GET, handler as POST };
-
