@@ -33,7 +33,8 @@ const LoginForm = () => {
                     color: '#B91C1C',
                     padding: '12px',
                     borderRadius: '4px',
-                    marginBottom: '16px'
+                    marginBottom: '16px',
+                    textAlign: 'center',
                 }}>
                     {errorMessage}
                 </div>
