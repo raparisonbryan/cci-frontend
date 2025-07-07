@@ -30,7 +30,9 @@ interface EditModalProps {
 
 const EditModal: React.FC<EditModalProps> = ({isOpen, onClose, rowData, onInsertRow, onDeleteRow, onSave}) => {
     const { data: session } = useSession();
-    const isAdmin = session?.user?.role === 'admin';
+    const userRole = session?.user?.role;
+    const isAdmin = userRole === 'admin';
+    const isUser = userRole === 'user';
 
     const [formData, setFormData] = useState({
         date: '',
@@ -71,7 +73,7 @@ const EditModal: React.FC<EditModalProps> = ({isOpen, onClose, rowData, onInsert
     if (!isOpen) return null;
 
     const handleChange = (field: string) => (e: { target: { value: any; }; }) => {
-        if (!isAdmin && rowData[field as keyof typeof rowData]) {
+        if (isUser && rowData[field as keyof typeof rowData]) {
             return;
         }
 
@@ -102,7 +104,10 @@ const EditModal: React.FC<EditModalProps> = ({isOpen, onClose, rowData, onInsert
     };
 
     const isReadOnly = (field: string) => {
-        return !isAdmin && !!rowData[field as keyof typeof rowData];
+        if (isUser && !!rowData[field as keyof typeof rowData]) {
+            return true;
+        }
+        return false;
     };
 
     const modalContent = (
@@ -185,9 +190,11 @@ const EditModal: React.FC<EditModalProps> = ({isOpen, onClose, rowData, onInsert
                         />
                     </div>
 
-                    {!isAdmin && (
+                    {isUser && (
                         <div className={styles.userMessage}>
-                            <p className={styles.infoText}>Vous ne pouvez pas modifier les champs qui contiennent déjà du texte.</p>
+                            <p className={styles.infoText}>
+                                Vous pouvez seulement ajouter du contenu dans les champs vides.
+                            </p>
                         </div>
                     )}
 

@@ -4,12 +4,25 @@ import Google from "next-auth/providers/google";
 const authorizedEmails = [
     "raparisonbryan@yahoo.fr",
     "raveloarison.tiana@gmail.com",
-    "cci.madeco2023@gmail.com"
+    "cci.madeco2023@gmail.com",
+    "logistique.cci@madeco.mg",
+    "braparison@wemadeya.fr",
+    "raparisonvalisoa@gmail.com"
 ];
 
 const adminEmails = [
     "raparisonbryan@yahoo.fr",
     "raveloarison.tiana@gmail.com"
+];
+
+const userEmails = [
+    "cci.madeco2023@gmail.com",
+    "braparison@wemadeya.fr"
+];
+
+const visitorEmails = [
+    "raparisonvalisoa@gmail.com",
+    "logistique.cci@madeco.mg"
 ];
 
 const handler = NextAuth({
@@ -33,11 +46,19 @@ const handler = NextAuth({
         },
         async jwt({ token, user, account }) {
             if (user && account) {
-                const isAdmin = adminEmails.includes(user.email?.toLowerCase() || '');
-                token.role = isAdmin ? 'admin' : 'user';
+                const email = user.email?.toLowerCase() || '';
+                if (adminEmails.includes(email)) {
+                    token.role = 'admin';
+                } else if (userEmails.includes(email)) {
+                    token.role = 'user';
+                } else if (visitorEmails.includes(email)) {
+                    token.role = 'visitor';
+                } else {
+                    token.role = 'visitor';
+                }
             }
             return token;
-        },
+        }
     },
     pages: {
         signIn: '/login',

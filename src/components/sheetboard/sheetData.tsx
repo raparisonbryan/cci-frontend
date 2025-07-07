@@ -22,17 +22,21 @@ interface RowData {
 
 const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
     const { data: session } = useSession();
-    const isAdmin = session?.user?.role === 'admin';
+    const userRole = session?.user?.role;
+    const isAdmin = userRole === 'admin';
+    const isUser = userRole === 'user';
+    const isVisitor = userRole === 'visitor';
     const { ws, isConnected, sendMessage } = useWebSocket();
     const [data, setData] = useState<string[][]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedRowData, setSelectedRowData] = useState<RowData | null>(null);
     const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
     const fetchSheetData = useCallback(async () => {
         try {
-            const response = await fetch(`https://cci-api.com/api/sheets?spreadsheetId=${spreadsheetId}&range=${range}`);
+            const response = await fetch(`${API_URL}/api/sheets?spreadsheetId=${spreadsheetId}&range=${range}`);
             const sheetData = await response.json();
             setData(sheetData);
             setIsLoading(false);
@@ -40,7 +44,7 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
             console.error('Error fetching sheet data:', error);
             setIsLoading(false);
         }
-    }, [spreadsheetId, range]);
+    }, [API_URL, spreadsheetId, range]);
 
     useEffect(() => {
         if (ws) {
@@ -82,7 +86,7 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
         });
 
         const newRange = `${range.split('!')[0]}!${String.fromCharCode(65 + cellIndex)}${rowIndex + 1}`;
-        await fetch('https://cci-api.com/api/sheets', {
+        await fetch(`${API_URL}/api/sheets`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -109,7 +113,7 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
 
             saveChangeToLocalHistory({
                 type: 'UPDATE_CELL',
-                user: session?.user?.name || 'Utilisateur inconnu',
+                user: session?.user?.name ?? 'Utilisateur inconnu',
                 userEmail: session?.user?.email,
                 userImage: session?.user?.image,
                 timestamp: new Date().toISOString(),
@@ -164,7 +168,7 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
 
         for (let i = 0; i < updatedValues.length; i++) {
             const newRange = `${range.split('!')[0]}!${String.fromCharCode(65 + i)}${selectedRowIndex + 1}`;
-            await fetch('https://cci-api.com/api/sheets', {
+            await fetch(`${API_URL}/api/sheets`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -192,7 +196,7 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
 
                 saveChangeToLocalHistory({
                     type: 'UPDATE_CELL',
-                    user: session?.user?.name || 'Utilisateur inconnu',
+                    user: session?.user?.name ?? 'Utilisateur inconnu',
                     userEmail: session?.user?.email,
                     userImage: session?.user?.image,
                     timestamp: new Date().toISOString(),
@@ -220,7 +224,7 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
             emptyRow[0] = data[selectedRowIndex][0];
             emptyRow[1] = data[selectedRowIndex][1];
 
-            await fetch('https://cci-api.com/api/sheets/insert', {
+            await fetch(`${API_URL}/api/sheets/insert`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -232,7 +236,7 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
             });
 
             const insertRange = `${range.split('!')[0]}!A${insertPosition}:${String.fromCharCode(65 + data[0].length - 1)}${insertPosition}`;
-            await fetch('https://cci-api.com/api/sheets', {
+            await fetch(`${API_URL}/api/sheets`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -256,7 +260,7 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
 
                 saveChangeToLocalHistory({
                     type: 'INSERT_ROW',
-                    user: session?.user?.name || 'Utilisateur inconnu',
+                    user: session?.user?.name ?? 'Utilisateur inconnu',
                     userEmail: session?.user?.email,
                     userImage: session?.user?.image,
                     timestamp: new Date().toISOString(),
@@ -287,7 +291,7 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
         try {
             const deleteRange = `${range.split('!')[0]}!A${selectedRowIndex + 1}`;
 
-            await fetch('https://cci-api.com/api/sheets/delete', {
+            await fetch(`${API_URL}/api/sheets/delete`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -310,7 +314,7 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
 
                 saveChangeToLocalHistory({
                     type: 'DELETE_ROW',
-                    user: session?.user?.name || 'Utilisateur inconnu',
+                    user: session?.user?.name ?? 'Utilisateur inconnu',
                     userEmail: session?.user?.email,
                     userImage: session?.user?.image,
                     timestamp: new Date().toISOString(),
@@ -350,7 +354,9 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
     };
 
     const isCellEditable = (cellIndex: number, cellContent: string) => {
-        if (!isAdmin && cellContent && cellContent.trim().length > 0) {
+        if (isVisitor) return false;
+        if (isAdmin) return cellIndex > 1;
+        if (isUser && cellContent && cellContent.trim().length > 0) {
             return false;
         }
         return cellIndex > 1;
@@ -385,10 +391,18 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
 
     return (
         <>
-            {!isAdmin && (
+            {isUser && (
                 <div className={styles.userMessage}>
                     <p className={styles.infoText}>
-                        Vous ne pouvez pas modifier les champs qui contiennent déjà du texte.
+                        Vous pouvez seulement ajouter du contenu dans les cellules vides.
+                    </p>
+                </div>
+            )}
+
+            {isVisitor && (
+                <div className={styles.userMessage}>
+                    <p className={styles.infoText}>
+                        Vous êtes en mode lecture seule. Vous ne pouvez pas modifier les données.
                     </p>
                 </div>
             )}
@@ -433,14 +447,16 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
                 </tbody>
             </table>
 
-            <EditModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                rowData={selectedRowData as RowData}
-                onSave={handleModalSave}
-                onInsertRow={handleInsertRow}
-                onDeleteRow={handleDeleteRow}
-            />
+            {!isVisitor && (
+                <EditModal
+                    isOpen={isModalOpen}
+                    onClose={() => setIsModalOpen(false)}
+                    rowData={selectedRowData as RowData}
+                    onSave={handleModalSave}
+                    onInsertRow={handleInsertRow}
+                    onDeleteRow={handleDeleteRow}
+                />
+            )}
         </>
     );
 };
