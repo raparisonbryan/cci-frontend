@@ -73,7 +73,7 @@ const EditModal: React.FC<EditModalProps> = ({isOpen, onClose, rowData, onInsert
     if (!isOpen) return null;
 
     const handleChange = (field: string) => (e: { target: { value: any; }; }) => {
-        if (isUser && rowData[field as keyof typeof rowData]) {
+        if (isUser && rowData[field as keyof typeof rowData] && String(rowData[field as keyof typeof rowData]).trim().length > 0) {
             return;
         }
 
@@ -104,10 +104,8 @@ const EditModal: React.FC<EditModalProps> = ({isOpen, onClose, rowData, onInsert
     };
 
     const isReadOnly = (field: string) => {
-        if (isUser && !!rowData[field as keyof typeof rowData]) {
-            return true;
-        }
-        return false;
+        return !!(isUser && rowData[field as keyof typeof rowData] && String(rowData[field as keyof typeof rowData]).trim().length > 0);
+
     };
 
     const modalContent = (

@@ -356,7 +356,7 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
     const isCellEditable = (cellIndex: number, cellContent: string) => {
         if (isVisitor) return false;
         if (isAdmin) return cellIndex > 1;
-        if (isUser && cellContent && cellContent.trim().length > 0) {
+        if (isUser && cellContent && String(cellContent).trim().length > 0) {
             return false;
         }
         return cellIndex > 1;
