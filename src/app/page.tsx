@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 
 export default function Home() {
     const [selectedMonth, setSelectedMonth] = useState('Janvier');
-    const [selectedTab, setSelectedTab] = useState('Mois');
+    const [selectedTab, setSelectedTab] = useState('Mois26');
 
     const handleMonthSelect = (month: string) => {
       setSelectedMonth(month);
