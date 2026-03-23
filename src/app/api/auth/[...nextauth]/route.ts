@@ -7,7 +7,8 @@ const authorizedEmails = [
     "cci.madeco2023@gmail.com",
     "logistique.cci@madeco.mg",
     "braparison@wemadeya.fr",
-    "raparisonvalisoa@gmail.com"
+    "raparisonvalisoa@gmail.com",
+    "zinalogistique@gmail.com"
 ];
 
 const adminEmails = [
@@ -22,7 +23,8 @@ const userEmails = [
 
 const visitorEmails = [
     "raparisonvalisoa@gmail.com",
-    "logistique.cci@madeco.mg"
+    "logistique.cci@madeco.mg",
+    "zinalogistique@gmail.com"
 ];
 
 const handler = NextAuth({
