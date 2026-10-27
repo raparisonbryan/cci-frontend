@@ -1,7 +1,7 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import styles from './sheetData.module.scss';
 import EditModal from '@/components/modal/Modal';
-import { Skeleton } from "antd";
+import { Skeleton, message } from "antd";
 import { useSession } from 'next-auth/react';
 import { useWebSocket } from '@/hooks/useWebSocket';
 
@@ -26,7 +26,7 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
     const isAdmin = userRole === 'admin';
     const isUser = userRole === 'user';
     const isVisitor = userRole === 'visitor';
-    const { ws, isConnected, sendMessage } = useWebSocket();
+    const { ws, sendMessage } = useWebSocket();
     const [data, setData] = useState<string[][]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedRowData, setSelectedRowData] = useState<RowData | null>(null);
@@ -36,15 +36,45 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
 
     const fetchSheetData = useCallback(async () => {
         try {
-            const response = await fetch(`${API_URL}/api/sheets?spreadsheetId=${spreadsheetId}&range=${range}`);
+            const params = new URLSearchParams({ spreadsheetId, range });
+            const response = await fetch(`${API_URL}/api/sheets?${params}`);
+            if (!response.ok) {
+                throw new Error(await response.text() || `HTTP ${response.status}`);
+            }
             const sheetData = await response.json();
-            setData(sheetData);
-            setIsLoading(false);
+            setData(Array.isArray(sheetData) ? sheetData : []);
         } catch (error) {
             console.error('Error fetching sheet data:', error);
+            message.error('Impossible de charger le planning.');
+        } finally {
             setIsLoading(false);
         }
     }, [API_URL, spreadsheetId, range]);
+
+    const postSheet = async (path: string, body: object) => {
+        const response = await fetch(`${API_URL}/api/sheets${path}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ spreadsheetId, ...body })
+        });
+        if (!response.ok) {
+            throw new Error(await response.text() || `HTTP ${response.status}`);
+        }
+    };
+
+    // Diffuse la modification aux autres clients et l'ajoute à l'historique local
+    const notifyChange = (change: Record<string, unknown>) => {
+        sendMessage(change);
+        saveChangeToLocalHistory({
+            ...change,
+            user: session?.user?.name ?? 'Utilisateur inconnu',
+            userEmail: session?.user?.email,
+            userImage: session?.user?.image,
+            timestamp: new Date().toISOString(),
+        });
+    };
 
     useEffect(() => {
         if (ws) {
@@ -90,53 +120,37 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
 
         if (value === String(data[rowIndex]?.[cellIndex] ?? '')) return;
 
-        setData(prevData => {
-            const newData = [...prevData];
-            newData[rowIndex][cellIndex] = value;
-            return newData;
-        });
+        setData(prevData => prevData.map((row, index) => {
+            if (index !== rowIndex) return row;
+            const newRow = [...row];
+            newRow[cellIndex] = value;
+            return newRow;
+        }));
 
-        const newRange = `${range.split('!')[0]}!${String.fromCharCode(65 + cellIndex)}${rowIndex + 1}`;
-        await fetch(`${API_URL}/api/sheets`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                spreadsheetId,
-                range: newRange,
-                values: [[value]]
-            })
-        });
+        const sheetName = range.split('!')[0];
+        const cellReference = `${String.fromCharCode(65 + cellIndex)}${rowIndex + 1}`;
+        const newRange = `${sheetName}!${cellReference}`;
 
-        if (isConnected) {
-            sendMessage({
-                type: 'UPDATE_CELL',
-                rowIndex,
-                cellIndex,
-                value,
-                spreadsheetId,
-                range: newRange,
-                sheetName: range.split('!')[0],
-                cellReference: `${String.fromCharCode(65 + cellIndex)}${rowIndex + 1}`,
-                fieldName: cellIndex < data[0].length ? data[0][cellIndex] : `Colonne ${cellIndex + 1}`
-            });
-
-            saveChangeToLocalHistory({
-                type: 'UPDATE_CELL',
-                user: session?.user?.name ?? 'Utilisateur inconnu',
-                userEmail: session?.user?.email,
-                userImage: session?.user?.image,
-                timestamp: new Date().toISOString(),
-                spreadsheetId,
-                range: newRange,
-                rowIndex,
-                cellIndex,
-                value,
-                cellReference: `${String.fromCharCode(65 + cellIndex)}${rowIndex + 1}`,
-                fieldName: cellIndex < data[0].length ? data[0][cellIndex] : `Colonne ${cellIndex + 1}`
-            });
+        try {
+            await postSheet('', { range: newRange, values: [[value]] });
+        } catch (error) {
+            console.error('Error updating cell:', error);
+            message.error("La modification n'a pas été enregistrée.");
+            await fetchSheetData();
+            return;
         }
+
+        notifyChange({
+            type: 'UPDATE_CELL',
+            rowIndex,
+            cellIndex,
+            value,
+            spreadsheetId,
+            range: newRange,
+            sheetName,
+            cellReference,
+            fieldName: cellIndex < data[0].length ? data[0][cellIndex] : `Colonne ${cellIndex + 1}`
+        });
     };
 
     const handleRowClick = (rowIndex: number) => {
@@ -166,128 +180,83 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
             formData.contact,
             formData.observation
         ];
-
-        setData(prevData => {
-            const newData = [...prevData];
-            updatedValues.forEach((value, index) => {
-                newData[selectedRowIndex][index] = value;
-            });
-            return newData;
-        });
-
         const fieldNames = ['date', 'jour', 'selection', 'evenement', 'client', 'contact', 'observation'];
 
-        for (let i = 0; i < updatedValues.length; i++) {
-            const newRange = `${range.split('!')[0]}!${String.fromCharCode(65 + i)}${selectedRowIndex + 1}`;
-            await fetch(`${API_URL}/api/sheets`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    spreadsheetId,
-                    range: newRange,
-                    values: [[updatedValues[i]]]
-                })
-            });
-
-            if (isConnected) {
-                sendMessage({
-                    type: 'UPDATE_CELL',
-                    rowIndex: selectedRowIndex,
-                    cellIndex: i,
-                    value: updatedValues[i],
-                    spreadsheetId,
-                    range: newRange,
-                    sheetName: range.split('!')[0],
-                    cellReference: `${String.fromCharCode(65 + i)}${selectedRowIndex + 1}`,
-                    fieldName: fieldNames[i],
-                    source: 'modal'
-                });
-
-                saveChangeToLocalHistory({
-                    type: 'UPDATE_CELL',
-                    user: session?.user?.name ?? 'Utilisateur inconnu',
-                    userEmail: session?.user?.email,
-                    userImage: session?.user?.image,
-                    timestamp: new Date().toISOString(),
-                    spreadsheetId,
-                    range: newRange,
-                    rowIndex: selectedRowIndex,
-                    cellIndex: i,
-                    value: updatedValues[i],
-                    cellReference: `${String.fromCharCode(65 + i)}${selectedRowIndex + 1}`,
-                    fieldName: fieldNames[i],
-                    source: 'modal'
-                });
-            }
-        }
+        const previousRow = data[selectedRowIndex] ?? [];
+        const changedIndexes = updatedValues
+            .map((value, index) => (value !== String(previousRow[index] ?? '') ? index : -1))
+            .filter(index => index !== -1);
 
         setIsModalOpen(false);
+        if (changedIndexes.length === 0) return;
+
+        const sheetName = range.split('!')[0];
+        const rowNumber = selectedRowIndex + 1;
+        const rowRange = `${sheetName}!A${rowNumber}:${String.fromCharCode(65 + updatedValues.length - 1)}${rowNumber}`;
+
+        try {
+            await postSheet('', { range: rowRange, values: [updatedValues] });
+        } catch (error) {
+            console.error('Error saving row:', error);
+            message.error("Les modifications n'ont pas été enregistrées.");
+            return;
+        }
+
+        setData(prevData => prevData.map((row, index) => {
+            if (index !== selectedRowIndex) return row;
+            const newRow = [...row];
+            updatedValues.forEach((value, cellIndex) => {
+                newRow[cellIndex] = value;
+            });
+            return newRow;
+        }));
+
+        changedIndexes.forEach(i => {
+            const cellReference = `${String.fromCharCode(65 + i)}${rowNumber}`;
+            notifyChange({
+                type: 'UPDATE_CELL',
+                rowIndex: selectedRowIndex,
+                cellIndex: i,
+                value: updatedValues[i],
+                spreadsheetId,
+                range: `${sheetName}!${cellReference}`,
+                sheetName,
+                cellReference,
+                fieldName: fieldNames[i],
+                source: 'modal'
+            });
+        });
     };
 
     const handleInsertRow = async () => {
-        if (selectedRowIndex === null) return;
+        if (selectedRowIndex === null || !data[0]) return;
+
+        const sheetName = range.split('!')[0];
+        const insertPosition = selectedRowIndex + 1;
+        const emptyRow = Array(data[0].length).fill('');
+        emptyRow[0] = data[selectedRowIndex][0];
+        emptyRow[1] = data[selectedRowIndex][1];
+        const insertRange = `${sheetName}!A${insertPosition}:${String.fromCharCode(65 + data[0].length - 1)}${insertPosition}`;
 
         try {
-            const insertPosition = selectedRowIndex + 1;
-            const emptyRow = Array(data[0].length).fill('');
-            emptyRow[0] = data[selectedRowIndex][0];
-            emptyRow[1] = data[selectedRowIndex][1];
+            await postSheet('/insert', { range: `${sheetName}!A${insertPosition}` });
+            await postSheet('', { range: insertRange, values: [emptyRow] });
 
-            await fetch(`${API_URL}/api/sheets/insert`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    spreadsheetId,
-                    range: `${range.split('!')[0]}!A${insertPosition}`,
-                })
+            notifyChange({
+                type: 'INSERT_ROW',
+                spreadsheetId,
+                range: insertRange,
+                sheetName,
+                position: insertPosition,
+                rowReference: `Ligne ${insertPosition}`
             });
-
-            const insertRange = `${range.split('!')[0]}!A${insertPosition}:${String.fromCharCode(65 + data[0].length - 1)}${insertPosition}`;
-            await fetch(`${API_URL}/api/sheets`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    spreadsheetId,
-                    range: insertRange,
-                    values: [emptyRow]
-                })
-            });
-
-            if (isConnected) {
-                sendMessage({
-                    type: 'INSERT_ROW',
-                    spreadsheetId,
-                    range: insertRange,
-                    sheetName: range.split('!')[0],
-                    position: insertPosition,
-                    rowReference: `Ligne ${insertPosition}`
-                });
-
-                saveChangeToLocalHistory({
-                    type: 'INSERT_ROW',
-                    user: session?.user?.name ?? 'Utilisateur inconnu',
-                    userEmail: session?.user?.email,
-                    userImage: session?.user?.image,
-                    timestamp: new Date().toISOString(),
-                    spreadsheetId,
-                    range: insertRange,
-                    position: insertPosition,
-                    sheetName: range.split('!')[0],
-                    rowReference: `Ligne ${insertPosition}`
-                });
-            }
-
-            await fetchSheetData();
-            setIsModalOpen(false);
         } catch (error) {
             console.error('Error inserting row:', error);
+            message.error("La ligne n'a pas pu être ajoutée.");
         }
+
+        await fetchSheetData();
+        setIsModalOpen(false);
     };
 
     const handleDeleteRow = async () => {
@@ -299,49 +268,27 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
 
         if (selectedRowIndex === null) return;
 
+        const sheetName = range.split('!')[0];
+        const deleteRange = `${sheetName}!A${selectedRowIndex + 1}`;
+
         try {
-            const deleteRange = `${range.split('!')[0]}!A${selectedRowIndex + 1}`;
+            await postSheet('/delete', { range: deleteRange });
 
-            await fetch(`${API_URL}/api/sheets/delete`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    spreadsheetId,
-                    range: deleteRange,
-                })
+            notifyChange({
+                type: 'DELETE_ROW',
+                spreadsheetId,
+                range: deleteRange,
+                sheetName,
+                rowIndex: selectedRowIndex,
+                rowReference: `Ligne ${selectedRowIndex + 1}`
             });
-
-            if (isConnected) {
-                sendMessage({
-                    type: 'DELETE_ROW',
-                    spreadsheetId,
-                    range: deleteRange,
-                    sheetName: range.split('!')[0],
-                    rowIndex: selectedRowIndex,
-                    rowReference: `Ligne ${selectedRowIndex + 1}`
-                });
-
-                saveChangeToLocalHistory({
-                    type: 'DELETE_ROW',
-                    user: session?.user?.name ?? 'Utilisateur inconnu',
-                    userEmail: session?.user?.email,
-                    userImage: session?.user?.image,
-                    timestamp: new Date().toISOString(),
-                    spreadsheetId,
-                    range: deleteRange,
-                    rowIndex: selectedRowIndex,
-                    sheetName: range.split('!')[0],
-                    rowReference: `Ligne ${selectedRowIndex + 1}`
-                });
-            }
-
-            await fetchSheetData();
-            setIsModalOpen(false);
         } catch (error) {
             console.error('Error deleting row:', error);
+            message.error("La ligne n'a pas pu être supprimée.");
         }
+
+        await fetchSheetData();
+        setIsModalOpen(false);
     };
 
     const saveChangeToLocalHistory = (changeData: any) => {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import styles from './Modal.module.scss';
 import { useSession } from 'next-auth/react';
+import { Popconfirm } from 'antd';
 
 interface EditModalProps {
     isOpen: boolean;
@@ -199,9 +200,18 @@ const EditModal: React.FC<EditModalProps> = ({isOpen, onClose, rowData, onInsert
                     <div className={styles.modalFooter}>
                         <div>
                             {isAdmin && (
-                                <button type="button" className={styles.deleteButton} onClick={handleDeleteRow}>
-                                    Supprimer
-                                </button>
+                                <Popconfirm
+                                    title="Supprimer cette ligne ?"
+                                    description="La ligne sera supprimée du Google Sheet."
+                                    okText="Supprimer"
+                                    cancelText="Annuler"
+                                    okButtonProps={{ danger: true }}
+                                    onConfirm={handleDeleteRow}
+                                >
+                                    <button type="button" className={styles.deleteButton}>
+                                        Supprimer
+                                    </button>
+                                </Popconfirm>
                             )}
                             <button type="button" className={styles.insertButton} onClick={handleInsertRow}>
                                 Ajouter

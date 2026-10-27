@@ -18,22 +18,37 @@ interface WebSocketProviderProps {
     children: ReactNode;
 }
 
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'wss://cci-api.com/socket';
+// Délai de reconnexion : 1s, 2s, 4s... plafonné à 30s
+const MAX_RECONNECT_DELAY = 30000;
+
 export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }) => {
     const [ws, setWs] = useState<WebSocket | null>(null);
     const [isConnected, setIsConnected] = useState(false);
 
     useEffect(() => {
-        if (!ws) {
-            const socket = new WebSocket(process.env.NEXT_PUBLIC_WS_URL || 'wss://cci-api.com/socket');
+        let socket: WebSocket | null = null;
+        let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+        let attempts = 0;
+        let disposed = false;
+
+        const connect = () => {
+            socket = new WebSocket(WS_URL);
 
             socket.onopen = () => {
                 console.log('WebSocket connected');
+                attempts = 0;
                 setIsConnected(true);
             };
 
             socket.onclose = () => {
                 console.log('WebSocket disconnected');
                 setIsConnected(false);
+                if (disposed) return;
+
+                const delay = Math.min(1000 * 2 ** attempts, MAX_RECONNECT_DELAY);
+                attempts++;
+                reconnectTimer = setTimeout(connect, delay);
             };
 
             socket.onerror = (error) => {
@@ -41,15 +56,17 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
             };
 
             setWs(socket);
-        }
+        };
+
+        connect();
 
         return () => {
-            if (ws) {
-                console.log('Cleaning up WebSocket connection');
-                ws.close();
-            }
+            console.log('Cleaning up WebSocket connection');
+            disposed = true;
+            if (reconnectTimer) clearTimeout(reconnectTimer);
+            socket?.close();
         };
-    }, [ws]);
+    }, []);
 
     const sendMessage = (message: any) => {
         if (ws?.readyState === WebSocket.OPEN) {
