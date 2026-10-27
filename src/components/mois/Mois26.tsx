@@ -9,18 +9,18 @@ const getSpreadsheetIdAndRange = (month: string) => {
     const spreadsheetId = '1NSbrkreltnCwihnE9tC24sVdDb5Tp5zCknzOXJKc2dQ';
 
     const monthMap: { [key: string]: { spreadsheetId: string, range: string } } = {
-        Janvier: { spreadsheetId, range: 'Janvier26!A1:Z99' },
-        Fevrier: { spreadsheetId, range: 'Fevrier26!A1:Z99' },
-        Mars: { spreadsheetId, range: 'Mars26!A1:Z99' },
-        Avril: { spreadsheetId, range: 'Avril26!A1:Z99' },
-        Mai: { spreadsheetId, range: 'Mai26!A1:Z99' },
-        Juin: { spreadsheetId, range: 'Juin26!A1:Z99' },
-        Juillet: { spreadsheetId, range: 'Juillet26!A1:Z99' },
-        Aout: { spreadsheetId, range: 'Aout26!A1:Z99' },
-        Septembre: { spreadsheetId, range: 'Septembre26!A1:Z99' },
-        Octobre: { spreadsheetId, range: 'Octobre26!A1:Z99' },
-        Novembre: { spreadsheetId, range: 'Novembre26!A1:Z99' },
-        Decembre: { spreadsheetId, range: 'Decembre26!A1:Z99' },
+        Janvier: { spreadsheetId, range: 'Janvier26!A1:Z' },
+        Fevrier: { spreadsheetId, range: 'Fevrier26!A1:Z' },
+        Mars: { spreadsheetId, range: 'Mars26!A1:Z' },
+        Avril: { spreadsheetId, range: 'Avril26!A1:Z' },
+        Mai: { spreadsheetId, range: 'Mai26!A1:Z' },
+        Juin: { spreadsheetId, range: 'Juin26!A1:Z' },
+        Juillet: { spreadsheetId, range: 'Juillet26!A1:Z' },
+        Aout: { spreadsheetId, range: 'Aout26!A1:Z' },
+        Septembre: { spreadsheetId, range: 'Septembre26!A1:Z' },
+        Octobre: { spreadsheetId, range: 'Octobre26!A1:Z' },
+        Novembre: { spreadsheetId, range: 'Novembre26!A1:Z' },
+        Decembre: { spreadsheetId, range: 'Decembre26!A1:Z' },
     };
     return monthMap[month];
 };

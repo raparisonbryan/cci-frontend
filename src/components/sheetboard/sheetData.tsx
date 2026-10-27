@@ -49,16 +49,25 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
     useEffect(() => {
         if (ws) {
             const messageHandler = (event: MessageEvent) => {
-                const update = JSON.parse(event.data);
+                let update;
+                try {
+                    update = JSON.parse(event.data);
+                } catch (error) {
+                    console.error('Invalid WebSocket message:', error);
+                    return;
+                }
+
+                if (update.spreadsheetId !== spreadsheetId || update.sheetName !== range.split('!')[0]) {
+                    return;
+                }
 
                 if (update.type === 'UPDATE_CELL') {
-                    setData(prevData => {
-                        const newData = [...prevData];
-                        if (newData[update.rowIndex]) {
-                            newData[update.rowIndex][update.cellIndex] = update.value;
-                        }
-                        return newData;
-                    });
+                    setData(prevData => prevData.map((row, index) => {
+                        if (index !== update.rowIndex) return row;
+                        const newRow = [...row];
+                        newRow[update.cellIndex] = update.value;
+                        return newRow;
+                    }));
                 } else if (update.type === 'INSERT_ROW' || update.type === 'DELETE_ROW') {
                     fetchSheetData();
                 }
@@ -70,7 +79,7 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
                 ws.removeEventListener('message', messageHandler);
             };
         }
-    }, [ws, fetchSheetData]);
+    }, [ws, fetchSheetData, spreadsheetId, range]);
 
     useEffect(() => {
         fetchSheetData();
@@ -78,6 +87,8 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
 
     const handleCellChange = async (event: React.FocusEvent<HTMLDivElement>, rowIndex: number, cellIndex: number) => {
         const value = event.target.innerText;
+
+        if (value === String(data[rowIndex]?.[cellIndex] ?? '')) return;
 
         setData(prevData => {
             const newData = [...prevData];

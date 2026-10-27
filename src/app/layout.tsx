@@ -17,16 +17,16 @@ export interface RootLayoutProps {
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="fr">
-        <Analytics/>
-        <AntdRegistry>
-            <body>
+        <body>
+            <AntdRegistry>
                 <WebSocketProvider>
                     <Providers>
                         {children}
                     </Providers>
                 </WebSocketProvider>
-            </body>
-        </AntdRegistry>
+            </AntdRegistry>
+            <Analytics/>
+        </body>
     </html>
   );
 }

@@ -24,7 +24,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
 
     useEffect(() => {
         if (!ws) {
-            const socket = new WebSocket('wss://cci-api.com/socket');
+            const socket = new WebSocket(process.env.NEXT_PUBLIC_WS_URL || 'wss://cci-api.com/socket');
 
             socket.onopen = () => {
                 console.log('WebSocket connected');
