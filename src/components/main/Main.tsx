@@ -2,6 +2,7 @@ import Mois from "@/components/mois/Mois"
 import Profil from "@/components/profil/Profil";
 import Mois26 from "@/components/mois/Mois26";
 import Mois27 from "@/components/mois/Mois27";
+import Mois28 from "@/components/mois/Mois28";
 
 export interface MainProps {
     selectedMonth: string;
@@ -15,6 +16,7 @@ const Main = (props: MainProps) => {
             { props.selectedTab === 'Mois' && <Mois selectedMonth={props.selectedMonth}/>}
             { props.selectedTab === 'Mois26' && <Mois26 selectedMonth={props.selectedMonth}/>}
             { props.selectedTab === 'Mois27' && <Mois27 selectedMonth={props.selectedMonth}/>}
+            { props.selectedTab === 'Mois28' && <Mois28 selectedMonth={props.selectedMonth}/>}
             { props.selectedTab === 'Profil' && <Profil />}
         </>
     );

@@ -71,6 +71,10 @@ const Dashboard = (props: DashboardProps) => {
                     <Img src={planning_icon} width={20} height={20} objectFit="cover" alt="icone mois" />
                     <p>2027</p>
                 </div>
+                <div className={styles.tab_wrapper} onClick={() => handleTabSelect('Mois28')}>
+                    <Img src={planning_icon} width={20} height={20} objectFit="cover" alt="icone mois" />
+                    <p>2028</p>
+                </div>
             </div>
             <div className={styles.separator}></div>
             <div className={styles.dates_wrapper}>
