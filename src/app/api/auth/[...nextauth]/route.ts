@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
+import { sessionCookie } from "@/utils/authCookie";
 
 const authorizedEmails = [
     "raparisonbryan@yahoo.fr",
@@ -65,6 +66,9 @@ const handler = NextAuth({
     pages: {
         signIn: '/login',
         error: '/login',
+    },
+    cookies: {
+        sessionToken: sessionCookie,
     },
 });
 

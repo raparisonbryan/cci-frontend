@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
+import { SESSION_COOKIE_NAME } from '@/utils/authCookie';
 
 const publicRoutes = ['/login', '/api/auth'];
 
 export async function middleware(request: NextRequest) {
-    const token = await getToken({ req: request });
+    const token = await getToken({ req: request, cookieName: SESSION_COOKIE_NAME });
     const { pathname } = request.nextUrl;
 
     if (

@@ -19,7 +19,6 @@ interface WebSocketProviderProps {
 }
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'wss://cci-api.com/socket';
-// Délai de reconnexion : 1s, 2s, 4s... plafonné à 30s
 const MAX_RECONNECT_DELAY = 30000;
 
 export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }) => {

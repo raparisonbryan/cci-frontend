@@ -54,9 +54,9 @@ const RecentChanges = () => {
                         const newChange: ChangeRecord = {
                             id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                             type: update.type,
-                            user: session?.user?.name || update.user || 'Utilisateur inconnu',
-                            userEmail: session?.user?.email || update.userEmail,
-                            userImage: session?.user?.image || update.userImage,
+                            user: update.user || 'Utilisateur inconnu',
+                            userEmail: update.userEmail,
+                            userImage: update.userImage,
                             timestamp: new Date().toISOString(),
                             spreadsheetId: update.spreadsheetId,
                             range: update.range,

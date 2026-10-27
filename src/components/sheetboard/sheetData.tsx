@@ -37,7 +37,7 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
     const fetchSheetData = useCallback(async () => {
         try {
             const params = new URLSearchParams({ spreadsheetId, range });
-            const response = await fetch(`${API_URL}/api/sheets?${params}`);
+            const response = await fetch(`${API_URL}/api/sheets?${params}`, { credentials: 'include' });
             if (!response.ok) {
                 throw new Error(await response.text() || `HTTP ${response.status}`);
             }
@@ -54,6 +54,7 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
     const postSheet = async (path: string, body: object) => {
         const response = await fetch(`${API_URL}/api/sheets${path}`, {
             method: 'POST',
+            credentials: 'include',
             headers: {
                 'Content-Type': 'application/json',
             },
