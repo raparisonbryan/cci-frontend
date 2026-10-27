@@ -61,9 +61,14 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
             body: JSON.stringify({ spreadsheetId, ...body })
         });
         if (!response.ok) {
-            throw new Error(await response.text() || `HTTP ${response.status}`);
+            const error = new Error(await response.text() || `HTTP ${response.status}`);
+            (error as Error & { status?: number }).status = response.status;
+            throw error;
         }
     };
+
+    // 409 : la ligne a changé côté Sheet (ajout/suppression/modification par quelqu'un d'autre)
+    const isConflict = (error: unknown) => (error as { status?: number })?.status === 409;
 
     // Diffuse la modification aux autres clients et l'ajoute à l'historique local
     const notifyChange = (change: Record<string, unknown>) => {
@@ -240,8 +245,11 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
         const insertRange = `${sheetName}!A${insertPosition}:${String.fromCharCode(65 + data[0].length - 1)}${insertPosition}`;
 
         try {
-            await postSheet('/insert', { range: `${sheetName}!A${insertPosition}` });
-            await postSheet('', { range: insertRange, values: [emptyRow] });
+            await postSheet('/insert', {
+                range: `${sheetName}!A${insertPosition}`,
+                expectedRow: data[selectedRowIndex],
+                values: emptyRow
+            });
 
             notifyChange({
                 type: 'INSERT_ROW',
@@ -253,7 +261,9 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
             });
         } catch (error) {
             console.error('Error inserting row:', error);
-            message.error("La ligne n'a pas pu être ajoutée.");
+            message.error(isConflict(error)
+                ? "Le planning a été modifié entre-temps, aucune ligne n'a été ajoutée. Les données ont été rechargées."
+                : "La ligne n'a pas pu être ajoutée.");
         }
 
         await fetchSheetData();
@@ -273,7 +283,7 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
         const deleteRange = `${sheetName}!A${selectedRowIndex + 1}`;
 
         try {
-            await postSheet('/delete', { range: deleteRange });
+            await postSheet('/delete', { range: deleteRange, expectedRow: data[selectedRowIndex] });
 
             notifyChange({
                 type: 'DELETE_ROW',
@@ -285,7 +295,9 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
             });
         } catch (error) {
             console.error('Error deleting row:', error);
-            message.error("La ligne n'a pas pu être supprimée.");
+            message.error(isConflict(error)
+                ? "Le planning a été modifié entre-temps, la ligne n'a pas été supprimée. Les données ont été rechargées."
+                : "La ligne n'a pas pu être supprimée.");
         }
 
         await fetchSheetData();
