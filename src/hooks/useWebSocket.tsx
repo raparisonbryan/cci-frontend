@@ -5,12 +5,14 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 interface WebSocketContextType {
     ws: WebSocket | null;
     isConnected: boolean;
+    connectionCount: number;
     sendMessage: (message: any) => void;
 }
 
 const WebSocketContext = createContext<WebSocketContextType>({
     ws: null,
     isConnected: false,
+    connectionCount: 0,
     sendMessage: () => {},
 });
 
@@ -24,6 +26,7 @@ const MAX_RECONNECT_DELAY = 30000;
 export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }) => {
     const [ws, setWs] = useState<WebSocket | null>(null);
     const [isConnected, setIsConnected] = useState(false);
+    const [connectionCount, setConnectionCount] = useState(0);
 
     useEffect(() => {
         let socket: WebSocket | null = null;
@@ -38,6 +41,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
                 console.log('WebSocket connected');
                 attempts = 0;
                 setIsConnected(true);
+                setConnectionCount(count => count + 1);
             };
 
             socket.onclose = () => {
@@ -76,7 +80,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
     };
 
     return (
-        <WebSocketContext.Provider value={{ ws, isConnected, sendMessage }}>
+        <WebSocketContext.Provider value={{ ws, isConnected, connectionCount, sendMessage }}>
             {children}
         </WebSocketContext.Provider>
     );

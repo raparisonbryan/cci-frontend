@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import styles from './sheetData.module.scss';
 import EditModal from '@/components/modal/Modal';
 import { Skeleton, message } from "antd";
@@ -26,7 +26,8 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
     const isAdmin = userRole === 'admin';
     const isUser = userRole === 'user';
     const isVisitor = userRole === 'visitor';
-    const { ws, sendMessage } = useWebSocket();
+    const { ws, connectionCount, sendMessage } = useWebSocket();
+    const lastConnectionCount = useRef(connectionCount);
     const [data, setData] = useState<string[][]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedRowData, setSelectedRowData] = useState<RowData | null>(null);
@@ -121,6 +122,14 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
         fetchSheetData();
     }, [fetchSheetData]);
 
+    // Après une reconnexion, recharger pour récupérer les modifications faites pendant la coupure
+    useEffect(() => {
+        if (connectionCount > 1 && connectionCount !== lastConnectionCount.current) {
+            fetchSheetData();
+        }
+        lastConnectionCount.current = connectionCount;
+    }, [connectionCount, fetchSheetData]);
+
     const handleCellChange = async (event: React.FocusEvent<HTMLDivElement>, rowIndex: number, cellIndex: number) => {
         const value = event.target.innerText;
 
@@ -190,7 +199,7 @@ const SheetData = ({ spreadsheetId, range }: SheetDataProps) => {
 
         const previousRow = data[selectedRowIndex] ?? [];
         const changedIndexes = updatedValues
-            .map((value, index) => (value !== String(previousRow[index] ?? '') ? index : -1))
+            .map((value, index) => (String(value ?? '') !== String(previousRow[index] ?? '') ? index : -1))
             .filter(index => index !== -1);
 
         setIsModalOpen(false);
